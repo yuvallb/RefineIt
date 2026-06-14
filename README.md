@@ -1,5 +1,22 @@
 # TransformStudio
 
+## Development
+
+```bash
+npm install
+npm run dev          # local dev server at http://localhost:5173/TransformStudio/
+npm run build        # production build → dist/
+npm run preview      # preview production build
+npm run lint         # ESLint
+npm run typecheck    # TypeScript
+npm run test:unit    # Vitest
+npm run test:e2e     # Playwright
+```
+
+Deployed to GitHub Pages at `https://<user>.github.io/TransformStudio/` on push to `main`.
+
+---
+
 ## 1. What is Transform Studio?
 
 
