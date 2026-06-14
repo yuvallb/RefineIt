@@ -69,10 +69,6 @@ export const filter: NodeDefinition = {
     const input = inputVars[0];
     const normalized = translateExpression(raw).replace(/\bdf\b/g, input);
 
-    if (normalized.includes('[')) {
-      return `${outputVar} = ${input}[${normalized}]`;
-    }
-
     return `${outputVar} = ${input}[${input}.eval(${JSON.stringify(normalized)})]`;
   },
 

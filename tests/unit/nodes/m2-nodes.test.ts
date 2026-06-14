@@ -45,6 +45,16 @@ describe('filter', () => {
     expect(code).toBe('node_b = node_a[node_a.eval("revenue > 1000")]');
   });
 
+  it('compiles bracket notation with eval', () => {
+    const code = filter.compile(
+      { expression: 'df["revenue"] > 1000' },
+      ['node_a'],
+      'node_b',
+      {},
+    );
+    expect(code).toBe('node_b = node_a[node_a.eval("node_a[\\"revenue\\"] > 1000")]');
+  });
+
   it('requires expression', () => {
     expect(filter.validate({ expression: '' }, [[]])).toHaveLength(1);
   });

@@ -10,13 +10,51 @@ import type {
 import { paramsToRecord } from '@/lib/utils';
 
 import { computeDatasetFingerprint, computeFingerprint } from './fingerprint';
-import { getInputVars, topoSort } from './topo-sort';
+import { getInputVars, getUpstreamNodeIds, topoSort } from './topo-sort';
 
 export interface BuildPipelineOptions {
   workflow: Workflow;
   staleNodeIds: Set<string>;
   runtimeByNode: Map<string, NodeRuntimeState>;
   datasets: Record<string, NodeDataset>;
+}
+
+async function resolveNodeFingerprint(
+  node: WorkflowNode,
+  workflow: Workflow,
+  runtimeByNode: Map<string, NodeRuntimeState>,
+  datasets: Record<string, NodeDataset>,
+  paramRecord: Record<string, unknown>,
+): Promise<string> {
+  const dataset = datasets[node.id];
+  let datasetFingerprint: string | null = null;
+  if (dataset) {
+    datasetFingerprint = await computeDatasetFingerprint(dataset.data);
+  }
+
+  const upstreamFingerprints = getInputVars(node.id, workflow.edges).map((varName) => {
+    const upstreamId = varName.replace('node_', '');
+    return runtimeByNode.get(upstreamId)?.fingerprint ?? '';
+  });
+
+  return computeFingerprint(node, paramRecord, upstreamFingerprints, datasetFingerprint);
+}
+
+function upstreamIsReady(
+  nodeId: string,
+  workflow: Workflow,
+  staleNodeIds: Set<string>,
+  runtimeByNode: Map<string, NodeRuntimeState>,
+  plannedIds: Set<string>,
+): boolean {
+  const upstreamIds = getUpstreamNodeIds(nodeId, workflow.edges);
+  return upstreamIds.every((upstreamId) => {
+    if (plannedIds.has(upstreamId)) return true;
+    if (staleNodeIds.has(upstreamId)) return false;
+
+    const cached = runtimeByNode.get(upstreamId);
+    return cached?.status === 'success' && cached.fingerprint !== null;
+  });
 }
 
 export async function buildPipelineRequest(
@@ -26,6 +64,7 @@ export async function buildPipelineRequest(
   const sorted = topoSort(workflow.nodes, workflow.edges);
   const paramRecord = paramsToRecord(workflow.params);
   const nodes: ExecutePipelineRequest['nodes'] = [];
+  const plannedIds = new Set<string>();
 
   for (const node of sorted) {
     const def = getNodeDefinition(node.type);
@@ -34,21 +73,29 @@ export async function buildPipelineRequest(
     const isStale = staleNodeIds.has(node.id);
     const dataset = datasets[node.id];
 
-    let datasetFingerprint: string | null = null;
-    if (dataset) {
-      datasetFingerprint = await computeDatasetFingerprint(dataset.data);
+    if (def.inputs.length > 0 && inputVars.length < def.inputs.length) {
+      continue;
     }
 
-    const upstreamFingerprints = getInputVars(node.id, workflow.edges).map((varName) => {
-      const upstreamId = varName.replace('node_', '');
-      return runtimeByNode.get(upstreamId)?.fingerprint ?? '';
-    });
+    if (def.inputs.length > 0 && !upstreamIsReady(node.id, workflow, staleNodeIds, runtimeByNode, plannedIds)) {
+      continue;
+    }
 
-    const fingerprint = await computeFingerprint(
+    if (node.type === 'source.csv' && !dataset) {
+      continue;
+    }
+
+    const inputSchemas = getUpstreamSchemas(node, workflow, runtimeByNode);
+    if (def.validate(node.config, inputSchemas).length > 0) {
+      continue;
+    }
+
+    const fingerprint = await resolveNodeFingerprint(
       node,
+      workflow,
+      runtimeByNode,
+      datasets,
       paramRecord,
-      upstreamFingerprints,
-      datasetFingerprint,
     );
 
     const cached = runtimeByNode.get(node.id);
@@ -76,6 +123,7 @@ export async function buildPipelineRequest(
     }
 
     nodes.push(entry);
+    plannedIds.add(node.id);
   }
 
   return { nodes, params: paramRecord };
@@ -94,23 +142,7 @@ export async function updateRuntimeFingerprints(
     const node = workflow.nodes.find((n) => n.id === nodeId);
     if (!node) continue;
 
-    const dataset = datasets[node.id];
-    let datasetFingerprint: string | null = null;
-    if (dataset) {
-      datasetFingerprint = await computeDatasetFingerprint(dataset.data);
-    }
-
-    const upstreamFingerprints = getInputVars(node.id, workflow.edges).map((varName) => {
-      const upstreamId = varName.replace('node_', '');
-      return next.get(upstreamId)?.fingerprint ?? '';
-    });
-
-    const fingerprint = await computeFingerprint(
-      node,
-      paramRecord,
-      upstreamFingerprints,
-      datasetFingerprint,
-    );
+    const fingerprint = await resolveNodeFingerprint(node, workflow, next, datasets, paramRecord);
 
     const existing = next.get(nodeId);
     if (existing) {

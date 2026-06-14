@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import { getUpstreamSchemas } from '@/engine/pipeline';
 import { getNodeDefinition } from '@/nodes/registry';
@@ -22,12 +22,43 @@ export function Inspector() {
   const selectedNode = workflow.nodes.find((n) => n.id === selectedNodeId);
   const runtime = selectedNodeId ? byNodeId.get(selectedNodeId) : null;
 
+  const upstreamSchemas = useMemo(
+    () => (selectedNode ? getUpstreamSchemas(selectedNode, workflow, byNodeId) : []),
+    [selectedNode, workflow, byNodeId],
+  );
+  const upstreamColumns = useMemo(
+    () => upstreamSchemas[0]?.map((c) => c.name) ?? [],
+    [upstreamSchemas],
+  );
+
   const validationErrors = useMemo(() => {
     if (!selectedNode) return [];
     const def = getNodeDefinition(selectedNode.type);
-    const inputSchemas = getUpstreamSchemas(selectedNode, workflow, byNodeId);
-    return def.validate(selectedNode.config, inputSchemas);
-  }, [selectedNode, workflow, byNodeId]);
+    return def.validate(selectedNode.config, upstreamSchemas);
+  }, [selectedNode, upstreamSchemas]);
+
+  useEffect(() => {
+    if (!selectedNode || selectedNode.type !== 'groupby' || upstreamColumns.length === 0) return;
+
+    const aggregations = Array.isArray(selectedNode.config.aggregations)
+      ? (selectedNode.config.aggregations as { column: string; func: string }[])
+      : [];
+    if (aggregations.length === 0) return;
+
+    const needsFill = aggregations.some((agg) => !agg.column);
+    if (!needsFill) return;
+
+    updateNodeConfig(selectedNode.id, {
+      aggregations: aggregations.map((agg) =>
+        agg.column ? agg : { ...agg, column: upstreamColumns[0] },
+      ),
+    });
+  }, [
+    selectedNode,
+    upstreamColumns,
+    selectedNode?.config.aggregations,
+    updateNodeConfig,
+  ]);
 
   if (!selectedNode) {
     return (
@@ -132,9 +163,7 @@ export function Inspector() {
                 : []
             }
             onChange={(aggs) => update('aggregations', aggs)}
-            upstreamColumns={
-              getUpstreamSchemas(selectedNode, workflow, byNodeId)[0]?.map((c) => c.name) ?? []
-            }
+            upstreamColumns={upstreamColumns}
           />
         </>
       )}

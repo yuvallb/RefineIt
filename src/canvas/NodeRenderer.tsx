@@ -71,6 +71,9 @@ export const NodeRenderer = memo(function NodeRenderer({ data, selected }: NodeP
 
       <div className="px-3 py-2">
         <p className="truncate text-xs text-muted-foreground">{summary}</p>
+        {status === 'error' && runtime?.error && (
+          <p className="mt-1 line-clamp-2 text-[10px] text-red-600">{runtime.error}</p>
+        )}
       </div>
 
       <div className="flex items-center gap-1.5 border-t border-border px-3 py-1.5">
