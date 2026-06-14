@@ -25,15 +25,20 @@ export function useProfile() {
 
     if (!selectedNodeId || !runtime) return;
     if (runtime.status !== 'success') return;
-    if (runtime.profile && runtime.profile.length > 0) return;
+    if (runtime.profile !== null) return;
     if (staleNodeIds.has(selectedNodeId)) return;
+
+    const nodeId = selectedNodeId;
 
     debounceRef.current = setTimeout(() => {
       void (async () => {
-        const result = await kernelClient.profileNode(selectedNodeId);
-        if (result.profile) {
-          setNodeState(selectedNodeId, { ...runtime, profile: result.profile });
-        }
+        const result = await kernelClient.profileNode(nodeId);
+        if (!result.profile) return;
+
+        const current = useRuntimeStore.getState().byNodeId.get(nodeId);
+        if (!current || current.status !== 'success' || current.profile !== null) return;
+
+        setNodeState(nodeId, { ...current, profile: result.profile });
       })();
     }, PROFILE_FETCH_DEBOUNCE_MS);
 

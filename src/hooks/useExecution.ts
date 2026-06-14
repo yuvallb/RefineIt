@@ -50,6 +50,17 @@ export function useExecution() {
         return;
       }
 
+      if (request.nodes.length > 0) {
+        const cleared = new Map(byNodeId);
+        for (const node of request.nodes) {
+          const existing = cleared.get(node.nodeId);
+          if (existing) {
+            cleared.set(node.nodeId, { ...existing, profile: null });
+          }
+        }
+        setNodeStates(Object.fromEntries(cleared.entries()));
+      }
+
       const result = await kernelClient.executePipeline({
         ...request,
         deleteNodeIds,

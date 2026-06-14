@@ -187,7 +187,9 @@ export function ProfilePanel() {
 
   const isStale = staleNodeIds.has(selectedNodeId);
   const isLoading =
-    isRunning || runtime?.status === 'running' || (runtime?.status === 'success' && !runtime.profile);
+    isRunning ||
+    runtime?.status === 'running' ||
+    (runtime?.status === 'success' && runtime.profile === null);
 
   if (runtime?.status === 'error') {
     return (

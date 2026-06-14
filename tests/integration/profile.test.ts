@@ -160,6 +160,28 @@ describe('profile integration', () => {
     expect(nameCol?.nullCount).toBeGreaterThan(0);
   });
 
+  it('profiles large datasets using row sampling', async () => {
+    const header = 'id,value\n';
+    const rows = Array.from({ length: 100_001 }, (_, i) => `${i},${i % 100}`).join('\n');
+    const bytes = encode(header + rows);
+    const code = sourceCsv.compile(
+      { filename: 'large.csv', delimiter: ',', header: true, encoding: 'utf-8' },
+      [],
+      'node_src',
+      {},
+      { mode: 'execution' },
+    );
+
+    const result = await client.executePipeline({
+      params: {},
+      nodes: [{ nodeId: 'src', code, isStale: true, csvBytes: bytes }],
+    });
+
+    expect(result.error).toBeUndefined();
+    expect(result.nodeResults.src?.preview?.totalRows).toBe(100_001);
+    expect(result.nodeResults.src?.profile?.length).toBe(2);
+  });
+
   it('fetches profile for an already-executed node', async () => {
     const bytes = encode(SALES_CSV);
     const code = sourceCsv.compile(
