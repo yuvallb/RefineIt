@@ -45,6 +45,17 @@
 | CI | **GitHub Actions** | typecheck → lint → test → build → deploy |
 | Hosting | **GitHub Pages** | Free static hosting; matches zero-backend constraint |
 
+## Implemented toolchain (M0+)
+
+Pinned in `package.json` after M0 scaffold. Bump intentionally; keep plan docs in sync when upgrading majors.
+
+| Package | Version (approx.) | Notes |
+|---------|-------------------|-------|
+| **Vite** | 8.x | Build, dev server, GitHub Pages `base` |
+| **Vitest** | 4.x | Unit tests in `vite.config.ts`; browser mode from M1 |
+| **@vitejs/plugin-react** | 6.x | Required peer for Vite 8 |
+| **@vitest/browser-playwright** | 4.x | Add in M1 for Pyodide integration tests |
+
 ## Pyodide packages (v1)
 
 | Package | Purpose |

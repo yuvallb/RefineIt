@@ -32,7 +32,7 @@ Estimated relative effort:
 
 ### Tasks
 
-- [ ] Initialize Vite + React 18 + TypeScript project
+- [ ] Initialize Vite + React 19 + TypeScript project
 - [ ] Add Tailwind CSS + shadcn/ui (Button, Dialog, Input, Select, Tabs, Toast)
 - [ ] Configure ESLint + Prettier
 - [ ] Set up Vitest + React Testing Library

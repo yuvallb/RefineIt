@@ -222,19 +222,45 @@ export function getPythonHelpers(): string {
 
 Per [`plan/10-testing.md`](../plan/10-testing.md): Pyodide tests **must** run in Vitest Browser Mode (Playwright provider), not Node/jsdom.
 
+**Dependencies:** install `@vitest/browser-playwright` (Vitest 4 peer; match Vitest major).
+
+**Config:** extend the existing `test` block in [`vite.config.ts`](../vite.config.ts) (M0 already uses this file — do not add a separate `vitest.config.ts`). Refactor to Vitest **projects** so unit and browser suites run separately:
+
 ```typescript
-// vitest.config.ts — browser project for integration/
+// vite.config.ts — extend M0 test block
+import { playwright } from '@vitest/browser-playwright';
+
 export default defineConfig({
+  // ... plugins, base, resolve (unchanged)
   test: {
     projects: [
-      { name: 'unit', environment: 'node', include: ['tests/unit/**'] },
-      { name: 'browser', browser: { enabled: true, provider: 'playwright' }, include: ['tests/integration/**'] },
+      {
+        extends: true,
+        test: {
+          name: 'unit',
+          environment: 'jsdom',
+          setupFiles: './tests/setup.ts',
+          include: ['tests/unit/**'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'browser',
+          include: ['tests/integration/**'],
+          browser: {
+            enabled: true,
+            provider: playwright(),
+            instances: [{ browser: 'chromium' }],
+          },
+        },
+      },
     ],
   },
 });
 ```
 
-Add npm script: `test:integration`.
+Add npm script: `test:integration` (e.g. `vitest run --project browser`).
 
 ### Sample integration tests
 

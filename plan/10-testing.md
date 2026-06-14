@@ -79,6 +79,8 @@ describe('filter node', () => {
 >
 > Therefore, all integration tests that load Pyodide **MUST run in Vitest's Browser Mode** (using Playwright under the hood) rather than Node.js/jsdom. This guarantees a real browser environment and ensures test fidelity.
 
+**Setup (from M1):** add devDependency `@vitest/browser-playwright` (match Vitest major). Configure a Vitest **browser** project in `vite.config.ts` alongside the M0 **unit** project — see [`tasks/M1-pyodide-kernel.md`](../tasks/M1-pyodide-kernel.md). Run via `npm run test:integration`.
+
 ```typescript
 // tests/integration/kernel.test.ts
 // Configured to run in Vitest Browser Mode

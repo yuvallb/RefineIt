@@ -95,6 +95,8 @@ Follow **M0 → M1 → … → M9** in order. See [`plan/07-milestones.md`](./pl
 | Package manager | **npm** (`package-lock.json`) |
 | CI / host | GitHub Actions → GitHub Pages |
 
+**Implemented versions (M0+):** Vite 8, Vitest 4, `@vitejs/plugin-react` 6. Vitest config lives in `vite.config.ts` (not a separate `vitest.config.ts`). Add `@vitest/browser-playwright` in M1 for Pyodide integration tests.
+
 Use native browser APIs where specified (e.g. `CompressionStream` for gzip, not extra libraries).
 
 ---
