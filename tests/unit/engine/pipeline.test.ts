@@ -51,6 +51,7 @@ function runtimeState(nodeId: string, fingerprint: string) {
     status: 'success' as const,
     fingerprint,
     preview: null,
+    profile: null,
     error: null,
   };
 }

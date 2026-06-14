@@ -85,6 +85,10 @@ export async function buildPipelineRequest(
       continue;
     }
 
+    if (node.type === 'source.json' && !dataset) {
+      continue;
+    }
+
     const inputSchemas = getUpstreamSchemas(node, workflow, runtimeByNode);
     if (def.validate(node.config, inputSchemas).length > 0) {
       continue;
@@ -120,6 +124,10 @@ export async function buildPipelineRequest(
         header: node.config.header !== false,
         encoding: typeof node.config.encoding === 'string' ? node.config.encoding : 'utf-8',
       };
+    }
+
+    if (node.type === 'source.json' && dataset) {
+      entry.jsonBytes = dataset.data;
     }
 
     nodes.push(entry);

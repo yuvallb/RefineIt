@@ -4,10 +4,12 @@ import { filter } from './filter';
 import { groupby } from './groupby';
 import { output } from './output';
 import { sourceCsv } from './source-csv';
+import { sourceJson } from './source-json';
 import type { NodeDefinition } from './types';
 
 export const nodeRegistry: Partial<Record<NodeType, NodeDefinition>> = {
   'source.csv': sourceCsv,
+  'source.json': sourceJson,
   filter,
   groupby,
   output,

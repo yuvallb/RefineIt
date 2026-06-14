@@ -6,6 +6,7 @@ import type {
   KernelStatus,
   LoadCsvOptions,
   LoadCsvResult,
+  ProfileNodeResult,
   RunPythonResult,
   StructuredError,
 } from '@/lib/types';
@@ -255,6 +256,22 @@ export class KernelClient {
         nodeResults: result.nodeResults,
         error: parsePythonError(result.error),
       };
+    }
+
+    return result;
+  }
+
+  async profileNode(nodeId: string): Promise<ProfileNodeResult> {
+    await this.init();
+
+    if (!this.api) {
+      return { error: { message: 'Worker not available' } };
+    }
+
+    const result = await this.api.profileNode(nodeId);
+
+    if (result.error) {
+      return { error: parsePythonError(result.error) };
     }
 
     return result;

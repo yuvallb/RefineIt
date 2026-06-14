@@ -14,6 +14,25 @@ export interface PreviewPayload {
   totalColumns: number;
 }
 
+export interface HistogramBin {
+  bin_start: number;
+  bin_end: number;
+  count: number;
+}
+
+export interface ColumnProfile {
+  name: string;
+  dtype: string;
+  nullCount: number;
+  nullPct: number;
+  uniqueCount: number;
+  min?: number | string;
+  max?: number | string;
+  mean?: number;
+  histogram?: HistogramBin[];
+  topValues?: Record<string, number>;
+}
+
 export interface StructuredError {
   message: string;
   traceback?: string;
@@ -96,6 +115,7 @@ export interface NodeRuntimeState {
   status: NodeStatus;
   fingerprint: string | null;
   preview: PreviewPayload | null;
+  profile: ColumnProfile[] | null;
   error: string | null;
 }
 
@@ -111,6 +131,12 @@ export interface PipelineNodeRequest {
   isStale: boolean;
   csvBytes?: Uint8Array;
   csvOptions?: LoadCsvOptions;
+  jsonBytes?: Uint8Array;
+}
+
+export interface ProfileNodeResult {
+  profile?: ColumnProfile[];
+  error?: StructuredError;
 }
 
 export interface ExecutePipelineRequest {

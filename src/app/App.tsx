@@ -3,6 +3,7 @@ import { CodeView } from '@/ui/CodeView';
 import { FileDropzone } from '@/ui/FileDropzone';
 import { Inspector } from '@/ui/Inspector';
 import { PreviewGrid } from '@/ui/PreviewGrid';
+import { ProfilePanel } from '@/ui/ProfilePanel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/components/ui/tabs';
 
 import { PyodideProvider } from '@/hooks/usePyodide';
@@ -36,15 +37,19 @@ function Workspace() {
             <aside className="flex w-80 shrink-0 flex-col border-l border-border bg-card">
               <Tabs
                 value={rightPanelTab}
-                onValueChange={(v) => setRightPanelTab(v as 'inspector' | 'code')}
+                onValueChange={(v) => setRightPanelTab(v as 'inspector' | 'profile' | 'code')}
                 className="flex h-full flex-col"
               >
-                <TabsList className="mx-2 mt-2 grid w-auto grid-cols-2">
+                <TabsList className="mx-2 mt-2 grid w-auto grid-cols-3">
                   <TabsTrigger value="inspector">Inspector</TabsTrigger>
+                  <TabsTrigger value="profile">Profile</TabsTrigger>
                   <TabsTrigger value="code">Code</TabsTrigger>
                 </TabsList>
                 <TabsContent value="inspector" className="mt-0 min-h-0 flex-1 overflow-hidden">
                   <Inspector />
+                </TabsContent>
+                <TabsContent value="profile" className="mt-0 min-h-0 flex-1 overflow-hidden">
+                  <ProfilePanel />
                 </TabsContent>
                 <TabsContent value="code" className="mt-0 min-h-0 flex-1 overflow-hidden">
                   <CodeView />

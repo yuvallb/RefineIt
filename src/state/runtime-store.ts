@@ -21,6 +21,7 @@ const defaultRuntime = (): NodeRuntimeState => ({
   status: 'idle',
   fingerprint: null,
   preview: null,
+  profile: null,
   error: null,
 });
 

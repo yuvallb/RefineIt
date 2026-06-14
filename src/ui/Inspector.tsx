@@ -106,6 +106,7 @@ export function Inspector() {
             <Input
               value={String(config.delimiter ?? ',')}
               onChange={(e) => update('delimiter', e.target.value)}
+              placeholder=","
             />
           </Field>
           <Field label="Header row">
@@ -119,6 +120,46 @@ export function Inspector() {
               <SelectContent>
                 <SelectItem value="true">Yes</SelectItem>
                 <SelectItem value="false">No</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Encoding">
+            <Select
+              value={typeof config.encoding === 'string' ? config.encoding : 'utf-8'}
+              onValueChange={(v) => update('encoding', v)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="utf-8">UTF-8</SelectItem>
+                <SelectItem value="latin-1">Latin-1</SelectItem>
+                <SelectItem value="cp1252">Windows-1252</SelectItem>
+                <SelectItem value="iso-8859-1">ISO-8859-1</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+        </>
+      )}
+
+      {selectedNode.type === 'source.json' && (
+        <>
+          <Field label="Filename">
+            <Input value={String(config.filename ?? '')} readOnly placeholder="Drop a JSON file" />
+          </Field>
+          <Field label="Orientation">
+            <Select
+              value={typeof config.orient === 'string' ? config.orient : 'records'}
+              onValueChange={(v) => update('orient', v)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="records">Records</SelectItem>
+                <SelectItem value="columns">Columns</SelectItem>
+                <SelectItem value="index">Index</SelectItem>
+                <SelectItem value="values">Values</SelectItem>
               </SelectContent>
             </Select>
           </Field>

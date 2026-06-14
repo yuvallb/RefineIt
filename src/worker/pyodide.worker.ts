@@ -6,11 +6,12 @@ import type {
   ExecutePipelineResult,
   LoadCsvOptions,
   LoadCsvResult,
+  ProfileNodeResult,
   RunPythonResult,
   StructuredError,
 } from '@/lib/types';
 
-import { executePipeline } from './kernel';
+import { executePipeline, profileNode } from './kernel';
 import { getPythonHelpers } from './python/helpers';
 
 let pyodide: PyodideInterface | null = null;
@@ -140,6 +141,7 @@ const kernelApi = {
         serializedResults[nodeId] = {
           ...state,
           preview: state.preview ? (toSerializable(state.preview) as typeof state.preview) : null,
+          profile: state.profile ? (toSerializable(state.profile) as typeof state.profile) : null,
         };
       }
 
@@ -149,6 +151,16 @@ const kernelApi = {
         nodeResults: {},
         error: parsePythonException(err),
       };
+    }
+  },
+
+  async profileNode(nodeId: string): Promise<ProfileNodeResult> {
+    try {
+      const api = await ensureInit();
+      const profile = profileNode(api, nodeId);
+      return { profile: toSerializable(profile) as ProfileNodeResult['profile'] };
+    } catch (err) {
+      return { error: parsePythonException(err) };
     }
   },
 };

@@ -23,13 +23,60 @@ test('app loads with workspace layout', async ({ page }) => {
   expect(consoleErrors).toEqual([]);
 });
 
+test('Flow A: CSV upload shows preview and profile', async ({ page }) => {
+  test.setTimeout(300000);
+
+  await page.goto('./');
+
+  const salesPath = path.resolve(__dirname, '../fixtures/sales.csv');
+  await page.getByLabel('Upload data file').setInputFiles(salesPath);
+
+  await expect(page.getByRole('contentinfo')).toContainText(/rows ×/, { timeout: 180000 });
+  await expect(page.getByRole('tab', { name: 'Profile' })).toBeVisible();
+  await expect(page.getByText('Data Profile')).toBeVisible({ timeout: 30000 });
+  await expect(page.getByTestId('profile-column-revenue')).toBeVisible();
+  await expect(page.getByTestId('profile-column-status')).toBeVisible();
+});
+
+test('Flow A: profile updates when selecting downstream node', async ({ page }) => {
+  test.setTimeout(300000);
+
+  await page.goto('./');
+
+  const salesPath = path.resolve(__dirname, '../fixtures/sales.csv');
+  await page.getByLabel('Upload data file').setInputFiles(salesPath);
+  await expect(page.getByRole('contentinfo')).toContainText(/rows ×/, { timeout: 180000 });
+
+  await page.getByRole('button', { name: 'Filter', exact: true }).click();
+  await page.evaluate(() => {
+    const bridge = window.__transformStudioTest;
+    const ids = bridge?.getNodeIds() ?? [];
+    const source = ids.find((id) =>
+      document.querySelector(`[data-testid="rf__node-${id}"]`)?.textContent?.includes('CSV Source'),
+    );
+    const filter = ids.find((id) =>
+      document.querySelector(`[data-testid="rf__node-${id}"]`)?.textContent?.includes('Filter'),
+    );
+    if (source && filter) bridge?.connectNodes(source, filter);
+  });
+
+  const filterNode = page.locator('.react-flow__node').filter({ hasText: 'Filter' }).first();
+  await filterNode.click();
+  await page.getByPlaceholder(/revenue/).fill('revenue > 1000');
+  await page.waitForTimeout(5000);
+
+  await page.getByRole('tab', { name: 'Profile' }).click();
+  await expect(page.getByText('Data Profile')).toBeVisible();
+  await expect(page.getByTestId('profile-column-revenue')).toBeVisible();
+});
+
 test('vertical slice: CSV → Filter → GroupBy → code → export', async ({ page }) => {
   test.setTimeout(300000);
 
   await page.goto('./');
 
   const salesPath = path.resolve(__dirname, '../fixtures/sales.csv');
-  await page.getByLabel('Upload CSV file').setInputFiles(salesPath);
+  await page.getByLabel('Upload data file').setInputFiles(salesPath);
 
   await expect(page.getByRole('contentinfo')).toContainText(/rows ×/, { timeout: 180000 });
 

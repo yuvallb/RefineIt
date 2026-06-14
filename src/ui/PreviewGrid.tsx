@@ -1,10 +1,16 @@
 import { useMemo } from 'react';
-import DataEditor, { GridCellKind, type GridCell, type GridColumn } from '@glideapps/glide-data-grid';
+import DataEditor, {
+  GridCellKind,
+  type GridCell,
+  type GridColumn,
+  type Highlight,
+} from '@glideapps/glide-data-grid';
 import '@glideapps/glide-data-grid/dist/index.css';
 
 import { PREVIEW_ROW_CAP } from '@/lib/constants';
 import type { PreviewPayload } from '@/lib/types';
 import { useRuntimeStore } from '@/state/runtime-store';
+import { useUiStore } from '@/state/ui-store';
 import { useWorkflowStore } from '@/state/workflow-store';
 
 function formatCell(value: unknown): string {
@@ -15,11 +21,12 @@ function formatCell(value: unknown): string {
 
 export function PreviewGrid() {
   const selectedNodeId = useWorkflowStore((s) => s.selectedNodeId);
+  const highlightedColumn = useUiStore((s) => s.highlightedColumn);
   const preview = useRuntimeStore((s) =>
     selectedNodeId ? (s.byNodeId.get(selectedNodeId)?.preview ?? null) : null,
   );
 
-  const { columns, getCellContent, rowCount } = useMemo(() => {
+  const { columns, getCellContent, rowCount, highlightRegions } = useMemo(() => {
     if (!preview) {
       const emptyCell = (): GridCell => ({
         kind: GridCellKind.Text,
@@ -31,6 +38,7 @@ export function PreviewGrid() {
         columns: [] as GridColumn[],
         getCellContent: emptyCell,
         rowCount: 0,
+        highlightRegions: [] as Highlight[],
       };
     }
 
@@ -39,6 +47,36 @@ export function PreviewGrid() {
       id: col.name,
       width: 140,
     }));
+
+    const highlightedIndex = highlightedColumn
+      ? preview.columns.findIndex((col) => col.name === highlightedColumn)
+      : -1;
+
+    const highlights: Highlight[] =
+      highlightedIndex >= 0
+        ? [
+            {
+              color: '#10B98133',
+              range: {
+                x: highlightedIndex,
+                y: 0,
+                width: 1,
+                height: preview.rows.length,
+              },
+              style: 'solid',
+            },
+            {
+              color: '#10B98155',
+              range: {
+                x: highlightedIndex,
+                y: 0,
+                width: 1,
+                height: 1,
+              },
+              style: 'solid',
+            },
+          ]
+        : [];
 
     const getCellContent = (cell: readonly [number, number]): GridCell => {
       const [col, row] = cell;
@@ -58,8 +96,9 @@ export function PreviewGrid() {
       columns: gridColumns,
       getCellContent,
       rowCount: preview.rows.length,
+      highlightRegions: highlights,
     };
-  }, [preview]);
+  }, [preview, highlightedColumn]);
 
   if (!selectedNodeId) {
     return (
@@ -84,12 +123,16 @@ export function PreviewGrid() {
       <div className="border-b border-border px-3 py-1.5 text-xs text-muted-foreground">
         Showing {showing.toLocaleString()} of {preview.totalRows.toLocaleString()} rows
         {preview.totalRows > PREVIEW_ROW_CAP && ' (preview capped at 100 rows)'}
+        {highlightedColumn && (
+          <span className="ml-2 text-primary">· Highlighting {highlightedColumn}</span>
+        )}
       </div>
       <div className="min-h-0 flex-1">
         <DataEditor
           columns={columns}
           rows={rowCount}
           getCellContent={getCellContent}
+          highlightRegions={highlightRegions}
           width="100%"
           height="100%"
           smoothScrollX
