@@ -137,11 +137,29 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     const targetDef = getNodeDefinition(targetNode.type);
     if (targetDef.category === 'source') return null;
 
-    const existing = state.workflow.edges.filter((e) => e.target === edgeInput.target).length;
-    if (existing >= targetDef.inputs.length) return null;
+    const incoming = state.workflow.edges.filter((e) => e.target === edgeInput.target);
+    if (incoming.length >= targetDef.inputs.length) return null;
+
+    const usedHandles = new Set(
+      incoming.map((e) => e.targetHandle ?? targetDef.inputs[0]?.id).filter(Boolean),
+    );
+
+    let targetHandle = edgeInput.targetHandle;
+    if (targetDef.inputs.length > 1) {
+      if (!targetHandle) {
+        const available = targetDef.inputs.find((p) => !usedHandles.has(p.id));
+        if (!available) return null;
+        targetHandle = available.id;
+      } else if (usedHandles.has(targetHandle)) {
+        return null;
+      }
+    }
 
     const duplicate = state.workflow.edges.some(
-      (e) => e.source === edgeInput.source && e.target === edgeInput.target,
+      (e) =>
+        e.source === edgeInput.source &&
+        e.target === edgeInput.target &&
+        (targetDef.inputs.length <= 1 || e.targetHandle === targetHandle),
     );
     if (duplicate) return null;
 
@@ -152,7 +170,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     set({
       workflow: {
         ...state.workflow,
-        edges: [...state.workflow.edges, { ...edgeInput, id }],
+        edges: [...state.workflow.edges, { ...edgeInput, id, targetHandle }],
         updatedAt: new Date().toISOString(),
       },
       staleNodeIds: stale,

@@ -108,6 +108,7 @@ export function FlowCanvas({ onDropFile }: FlowCanvasProps) {
         targetNode.type,
         workflow.edges,
         connection.target,
+        connection.targetHandle,
       );
       if (error) return;
 

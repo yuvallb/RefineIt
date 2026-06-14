@@ -80,3 +80,76 @@ def profile_df(df):
         profiles.append(profile)
 
     return profiles
+
+
+WHITELISTED_CALLS = {"abs", "round", "min", "max"}
+
+
+def validate_expression(expr):
+    import ast
+
+    if not isinstance(expr, str) or not expr.strip():
+        return {"valid": False, "error": "Expression is empty"}
+
+    try:
+        tree = ast.parse(expr.strip(), mode="eval")
+    except SyntaxError as exc:
+        return {"valid": False, "error": str(exc)}
+
+    for node in ast.walk(tree):
+        node_type = type(node)
+
+        if node_type in (
+            ast.Expression,
+            ast.Load,
+            ast.Name,
+            ast.Constant,
+            ast.Compare,
+            ast.BinOp,
+            ast.UnaryOp,
+            ast.BoolOp,
+            ast.Subscript,
+            ast.Attribute,
+            ast.Tuple,
+            ast.List,
+            ast.Slice,
+            ast.And,
+            ast.Or,
+            ast.Add,
+            ast.Sub,
+            ast.Mult,
+            ast.Div,
+            ast.Mod,
+            ast.Pow,
+            ast.Eq,
+            ast.NotEq,
+            ast.Lt,
+            ast.LtE,
+            ast.Gt,
+            ast.GtE,
+            ast.Is,
+            ast.IsNot,
+            ast.In,
+            ast.NotIn,
+            ast.USub,
+            ast.UAdd,
+            ast.Not,
+        ):
+            if node_type is ast.Attribute and node.attr.startswith("_"):
+                return {"valid": False, "error": f"Attribute '{node.attr}' not allowed"}
+            continue
+
+        if node_type is ast.Call:
+            if (
+                isinstance(node.func, ast.Name)
+                and node.func.id in WHITELISTED_CALLS
+            ):
+                continue
+            return {"valid": False, "error": "Function calls not allowed"}
+
+        if node_type in (ast.Import, ast.ImportFrom, ast.Lambda, ast.FunctionDef, ast.ClassDef):
+            return {"valid": False, "error": f"Disallowed syntax: {node_type.__name__}"}
+
+        return {"valid": False, "error": f"Disallowed syntax: {node_type.__name__}"}
+
+    return {"valid": True}

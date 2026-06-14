@@ -1,8 +1,17 @@
 import type { NodeType } from '@/lib/types';
 
+import { cast } from './cast';
+import { concat } from './concat';
+import { derive } from './derive';
+import { dropna } from './dropna';
+import { fillna } from './fillna';
 import { filter } from './filter';
 import { groupby } from './groupby';
+import { join } from './join';
 import { output } from './output';
+import { rename } from './rename';
+import { select } from './select';
+import { sort } from './sort';
 import { sourceCsv } from './source-csv';
 import { sourceJson } from './source-json';
 import type { NodeDefinition } from './types';
@@ -11,7 +20,16 @@ export const nodeRegistry: Partial<Record<NodeType, NodeDefinition>> = {
   'source.csv': sourceCsv,
   'source.json': sourceJson,
   filter,
+  select,
+  rename,
+  derive,
+  sort,
   groupby,
+  join,
+  concat,
+  dropna,
+  fillna,
+  cast,
   output,
 };
 

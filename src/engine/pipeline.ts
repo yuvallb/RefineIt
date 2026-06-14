@@ -10,7 +10,7 @@ import type {
 import { paramsToRecord } from '@/lib/utils';
 
 import { computeDatasetFingerprint, computeFingerprint } from './fingerprint';
-import { getInputVars, getUpstreamNodeIds, topoSort } from './topo-sort';
+import { getInputVars, getUpstreamNodeIds, getUpstreamSchemas, topoSort } from './topo-sort';
 
 export interface BuildPipelineOptions {
   workflow: Workflow;
@@ -26,13 +26,14 @@ async function resolveNodeFingerprint(
   datasets: Record<string, NodeDataset>,
   paramRecord: Record<string, unknown>,
 ): Promise<string> {
+  const def = getNodeDefinition(node.type);
   const dataset = datasets[node.id];
   let datasetFingerprint: string | null = null;
   if (dataset) {
     datasetFingerprint = await computeDatasetFingerprint(dataset.data);
   }
 
-  const upstreamFingerprints = getInputVars(node.id, workflow.edges).map((varName) => {
+  const upstreamFingerprints = getInputVars(node.id, workflow.edges, def.inputs).map((varName) => {
     const upstreamId = varName.replace('node_', '');
     return runtimeByNode.get(upstreamId)?.fingerprint ?? '';
   });
@@ -68,7 +69,7 @@ export async function buildPipelineRequest(
 
   for (const node of sorted) {
     const def = getNodeDefinition(node.type);
-    const inputVars = getInputVars(node.id, workflow.edges);
+    const inputVars = getInputVars(node.id, workflow.edges, def.inputs);
     const outputVar = `node_${node.id}`;
     const isStale = staleNodeIds.has(node.id);
     const dataset = datasets[node.id];
@@ -89,7 +90,7 @@ export async function buildPipelineRequest(
       continue;
     }
 
-    const inputSchemas = getUpstreamSchemas(node, workflow, runtimeByNode);
+    const inputSchemas = getUpstreamSchemas(node.id, workflow.edges, runtimeByNode, def.inputs);
     if (def.validate(node.config, inputSchemas).length > 0) {
       continue;
     }
@@ -161,11 +162,11 @@ export async function updateRuntimeFingerprints(
   return next;
 }
 
-export function getUpstreamSchemas(
+export function getUpstreamSchemasForNode(
   node: WorkflowNode,
   workflow: Workflow,
   runtimeByNode: Map<string, NodeRuntimeState>,
 ) {
-  const upstreamIds = workflow.edges.filter((e) => e.target === node.id).map((e) => e.source);
-  return upstreamIds.map((id) => runtimeByNode.get(id)?.preview?.columns ?? []);
+  const def = getNodeDefinition(node.type);
+  return getUpstreamSchemas(node.id, workflow.edges, runtimeByNode, def.inputs);
 }

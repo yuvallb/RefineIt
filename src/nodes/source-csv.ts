@@ -55,7 +55,12 @@ export const sourceCsv: NodeDefinition = {
       { kind: 'text', key: 'filename', label: 'Filename' },
       { kind: 'text', key: 'delimiter', label: 'Delimiter' },
       { kind: 'select', key: 'header', label: 'Header row', options: ['true', 'false'] },
-      { kind: 'text', key: 'encoding', label: 'Encoding' },
+      {
+        kind: 'select',
+        key: 'encoding',
+        label: 'Encoding',
+        options: ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1'],
+      },
     ];
   },
 

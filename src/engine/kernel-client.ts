@@ -3,6 +3,7 @@ import * as Comlink from 'comlink';
 import type {
   ExecutePipelineRequest,
   ExecutePipelineResult,
+  ExpressionValidationResult,
   KernelStatus,
   LoadCsvOptions,
   LoadCsvResult,
@@ -275,6 +276,16 @@ export class KernelClient {
     }
 
     return result;
+  }
+
+  async validateExpression(expr: string): Promise<ExpressionValidationResult> {
+    await this.init();
+
+    if (!this.api) {
+      return { valid: false, error: 'Worker not available' };
+    }
+
+    return this.api.validateExpression(expr);
   }
 }
 

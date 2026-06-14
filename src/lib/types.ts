@@ -149,3 +149,8 @@ export interface ExecutePipelineResult {
   nodeResults: Record<string, NodeRuntimeState>;
   error?: StructuredError;
 }
+
+export interface ExpressionValidationResult {
+  valid: boolean;
+  error?: string;
+}

@@ -1,7 +1,13 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 
-import { getUpstreamSchemas } from '@/engine/pipeline';
+import { getUpstreamSchemasForNode } from '@/engine/pipeline';
 import { getNodeDefinition } from '@/nodes/registry';
+import type { InspectorField } from '@/nodes/types';
+import { useRuntimeStore } from '@/state/runtime-store';
+import { useWorkflowStore } from '@/state/workflow-store';
+import { ColumnPicker } from '@/ui/ColumnPicker';
+import { ExpressionInput } from '@/ui/ExpressionInput';
 import { Input } from '@/ui/components/ui/input';
 import {
   Select,
@@ -10,8 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/ui/components/ui/select';
-import { useRuntimeStore } from '@/state/runtime-store';
-import { useWorkflowStore } from '@/state/workflow-store';
+
+const DTYPE_OPTIONS = ['int64', 'float64', 'str', 'bool', 'datetime64[ns]', 'category'];
 
 export function Inspector() {
   const workflow = useWorkflowStore((s) => s.workflow);
@@ -23,12 +29,8 @@ export function Inspector() {
   const runtime = selectedNodeId ? byNodeId.get(selectedNodeId) : null;
 
   const upstreamSchemas = useMemo(
-    () => (selectedNode ? getUpstreamSchemas(selectedNode, workflow, byNodeId) : []),
+    () => (selectedNode ? getUpstreamSchemasForNode(selectedNode, workflow, byNodeId) : []),
     [selectedNode, workflow, byNodeId],
-  );
-  const upstreamColumns = useMemo(
-    () => upstreamSchemas[0]?.map((c) => c.name) ?? [],
-    [upstreamSchemas],
   );
 
   const validationErrors = useMemo(() => {
@@ -37,8 +39,21 @@ export function Inspector() {
     return def.validate(selectedNode.config, upstreamSchemas);
   }, [selectedNode, upstreamSchemas]);
 
+  const errorsByField = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const err of validationErrors) {
+      const key = err.field ?? '_global';
+      const list = map.get(key) ?? [];
+      list.push(err.message);
+      map.set(key, list);
+    }
+    return map;
+  }, [validationErrors]);
+
   useEffect(() => {
-    if (!selectedNode || selectedNode.type !== 'groupby' || upstreamColumns.length === 0) return;
+    if (!selectedNode || selectedNode.type !== 'groupby') return;
+    const schema = upstreamSchemas[0] ?? [];
+    if (schema.length === 0) return;
 
     const aggregations = Array.isArray(selectedNode.config.aggregations)
       ? (selectedNode.config.aggregations as { column: string; func: string }[])
@@ -50,15 +65,10 @@ export function Inspector() {
 
     updateNodeConfig(selectedNode.id, {
       aggregations: aggregations.map((agg) =>
-        agg.column ? agg : { ...agg, column: upstreamColumns[0] },
+        agg.column ? agg : { ...agg, column: schema[0].name },
       ),
     });
-  }, [
-    selectedNode,
-    upstreamColumns,
-    selectedNode?.config.aggregations,
-    updateNodeConfig,
-  ]);
+  }, [selectedNode, upstreamSchemas, updateNodeConfig]);
 
   if (!selectedNode) {
     return (
@@ -88,161 +98,323 @@ export function Inspector() {
         </div>
       )}
 
-      {validationErrors.map((err) => (
+      {(errorsByField.get('_global') ?? []).map((message) => (
         <div
-          key={`${err.field}-${err.message}`}
+          key={message}
           className="rounded-md border border-amber-500/50 bg-amber-500/10 p-2 text-xs text-amber-700"
         >
-          {err.message}
+          {message}
         </div>
       ))}
 
-      {selectedNode.type === 'source.csv' && (
-        <>
-          <Field label="Filename">
-            <Input value={String(config.filename ?? '')} readOnly placeholder="Drop a CSV file" />
-          </Field>
-          <Field label="Delimiter">
-            <Input
-              value={String(config.delimiter ?? ',')}
-              onChange={(e) => update('delimiter', e.target.value)}
-              placeholder=","
-            />
-          </Field>
-          <Field label="Header row">
-            <Select
-              value={config.header !== false ? 'true' : 'false'}
-              onValueChange={(v) => update('header', v === 'true')}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="true">Yes</SelectItem>
-                <SelectItem value="false">No</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field label="Encoding">
-            <Select
-              value={typeof config.encoding === 'string' ? config.encoding : 'utf-8'}
-              onValueChange={(v) => update('encoding', v)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="utf-8">UTF-8</SelectItem>
-                <SelectItem value="latin-1">Latin-1</SelectItem>
-                <SelectItem value="cp1252">Windows-1252</SelectItem>
-                <SelectItem value="iso-8859-1">ISO-8859-1</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
-        </>
-      )}
+      {def.inspectorSchema().map((field) => (
+        <InspectorFieldRenderer
+          key={field.key}
+          field={field}
+          config={config}
+          upstreamSchemas={upstreamSchemas}
+          errors={errorsByField.get(field.key) ?? []}
+          onUpdate={update}
+        />
+      ))}
 
-      {selectedNode.type === 'source.json' && (
-        <>
-          <Field label="Filename">
-            <Input value={String(config.filename ?? '')} readOnly placeholder="Drop a JSON file" />
-          </Field>
-          <Field label="Orientation">
-            <Select
-              value={typeof config.orient === 'string' ? config.orient : 'records'}
-              onValueChange={(v) => update('orient', v)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="records">Records</SelectItem>
-                <SelectItem value="columns">Columns</SelectItem>
-                <SelectItem value="index">Index</SelectItem>
-                <SelectItem value="values">Values</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
-        </>
-      )}
+      {def.inputs.length > 0 && <InputPreviewSection nodeId={selectedNode.id} workflow={workflow} />}
+    </div>
+  );
+}
 
-      {selectedNode.type === 'filter' && (
-        <Field label="Filter expression">
+function InspectorFieldRenderer({
+  field,
+  config,
+  upstreamSchemas,
+  errors,
+  onUpdate,
+}: {
+  field: InspectorField;
+  config: Record<string, unknown>;
+  upstreamSchemas: ReturnType<typeof getUpstreamSchemasForNode>;
+  errors: string[];
+  onUpdate: (key: string, value: unknown) => void;
+}) {
+  const schemaIndex = 'schemaIndex' in field ? (field.schemaIndex ?? 0) : 0;
+  const schema = upstreamSchemas[schemaIndex] ?? [];
+
+  const renderField = () => {
+    switch (field.kind) {
+      case 'text': {
+        const readOnly = field.key === 'filename';
+        return (
           <Input
-            value={String(config.expression ?? '')}
-            onChange={(e) => update('expression', e.target.value)}
-            placeholder='e.g. df["revenue"] > 1000 or revenue > 1000'
-            className="font-mono text-xs"
+            value={String(config[field.key] ?? '')}
+            readOnly={readOnly}
+            onChange={(e) => onUpdate(field.key, e.target.value)}
+            className="text-xs"
           />
-          <p className="mt-1 text-[10px] text-muted-foreground">
-            Use column names directly (revenue &gt; 1000) or bracket notation
-          </p>
-        </Field>
-      )}
-
-      {selectedNode.type === 'groupby' && (
-        <>
-          <Field label="Group columns (comma-separated)">
-            <Input
-              value={Array.isArray(config.groupColumns) ? config.groupColumns.join(', ') : ''}
-              onChange={(e) =>
-                update(
-                  'groupColumns',
-                  e.target.value
-                    .split(',')
-                    .map((s) => s.trim())
-                    .filter(Boolean),
-                )
-              }
-              placeholder="region, country"
-            />
-          </Field>
+        );
+      }
+      case 'number':
+        return (
+          <Input
+            type="number"
+            value={String(config[field.key] ?? '')}
+            onChange={(e) => onUpdate(field.key, Number(e.target.value))}
+            className="text-xs"
+          />
+        );
+      case 'select': {
+        const raw = config[field.key];
+        const value =
+          field.key === 'header'
+            ? raw !== false
+              ? 'true'
+              : 'false'
+            : String(raw ?? field.options[0] ?? '');
+        return (
+          <Select value={value} onValueChange={(v) => {
+            if (field.key === 'header') {
+              onUpdate(field.key, v === 'true');
+            } else if (field.key === 'axis') {
+              onUpdate(field.key, Number(v));
+            } else {
+              onUpdate(field.key, v);
+            }
+          }}>
+            <SelectTrigger className="text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {field.options.map((opt) => (
+                <SelectItem key={opt} value={opt}>
+                  {opt}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+      }
+      case 'column':
+        return (
+          <ColumnPicker
+            columns={schema}
+            value={typeof config[field.key] === 'string' ? (config[field.key] as string) : ''}
+            onChange={(v) => onUpdate(field.key, v)}
+          />
+        );
+      case 'columns':
+        return (
+          <ColumnPicker
+            columns={schema}
+            multiple
+            value={Array.isArray(config[field.key]) ? (config[field.key] as string[]) : []}
+            onChange={(v) => onUpdate(field.key, v)}
+          />
+        );
+      case 'expression':
+        return (
+          <ExpressionInput
+            value={String(config[field.key] ?? '')}
+            onChange={(v) => onUpdate(field.key, v)}
+          />
+        );
+      case 'mapping':
+        return (
+          <MappingEditor
+            mapping={
+              config[field.key] && typeof config[field.key] === 'object'
+                ? (config[field.key] as Record<string, string>)
+                : {}
+            }
+            columns={schema.map((c) => c.name)}
+            onChange={(m) => onUpdate(field.key, m)}
+          />
+        );
+      case 'dtype-mapping':
+        return (
+          <DtypeMappingEditor
+            mapping={
+              config[field.key] && typeof config[field.key] === 'object'
+                ? (config[field.key] as Record<string, string>)
+                : {}
+            }
+            columns={schema.map((c) => c.name)}
+            onChange={(m) => onUpdate(field.key, m)}
+          />
+        );
+      case 'aggregations':
+        return (
           <GroupByAggregations
             aggregations={
               Array.isArray(config.aggregations)
                 ? (config.aggregations as { column: string; func: string }[])
                 : []
             }
-            onChange={(aggs) => update('aggregations', aggs)}
-            upstreamColumns={upstreamColumns}
+            onChange={(aggs) => onUpdate('aggregations', aggs)}
+            upstreamColumns={schema.map((c) => c.name)}
           />
-        </>
-      )}
+        );
+      case 'param-ref':
+        return (
+          <Input value="" disabled placeholder="Parameters (M5)" className="text-xs opacity-50" />
+        );
+      default: {
+        console.warn(`Unknown inspector field kind: ${(field as InspectorField).kind}`);
+        return null;
+      }
+    }
+  };
 
-      {selectedNode.type === 'output' && (
-        <>
-          <Field label="Format">
-            <Select
-              value={config.format === 'json' ? 'json' : 'csv'}
-              onValueChange={(v) => update('format', v)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="csv">CSV</SelectItem>
-                <SelectItem value="json">JSON</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field label="Filename">
-            <Input
-              value={String(config.filename ?? '')}
-              onChange={(e) => update('filename', e.target.value)}
-            />
-          </Field>
-        </>
-      )}
+  return (
+    <label className="flex flex-col gap-1.5">
+      <span className="text-xs font-medium text-foreground">{field.label}</span>
+      {renderField()}
+      {errors.map((message) => (
+        <span key={message} className="text-[10px] text-amber-700">
+          {message}
+        </span>
+      ))}
+    </label>
+  );
+}
+
+function MappingEditor({
+  mapping,
+  columns,
+  onChange,
+}: {
+  mapping: Record<string, string>;
+  columns: string[];
+  onChange: (mapping: Record<string, string>) => void;
+}) {
+  const entries = Object.entries(mapping);
+
+  const updateEntry = (index: number, from: string, to: string) => {
+    const next = { ...mapping };
+    const oldKey = entries[index]?.[0];
+    if (oldKey && oldKey !== from) delete next[oldKey];
+    if (from) next[from] = to;
+    onChange(next);
+  };
+
+  const addEntry = () => {
+    const from = columns.find((c) => !(c in mapping)) ?? '';
+    onChange({ ...mapping, [from]: '' });
+  };
+
+  const removeEntry = (key: string) => {
+    const next = { ...mapping };
+    delete next[key];
+    onChange(next);
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      {entries.map(([from, to], i) => (
+        <div key={`${from}-${i}`} className="flex gap-1">
+          <Select value={from} onValueChange={(v) => updateEntry(i, v, to)}>
+            <SelectTrigger className="flex-1 text-xs">
+              <SelectValue placeholder="Column" />
+            </SelectTrigger>
+            <SelectContent>
+              {columns.map((col) => (
+                <SelectItem key={col} value={col}>
+                  {col}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Input
+            value={to}
+            onChange={(e) => updateEntry(i, from, e.target.value)}
+            placeholder="New name"
+            className="flex-1 text-xs"
+          />
+          <button
+            type="button"
+            onClick={() => removeEntry(from)}
+            className="px-1 text-xs text-muted-foreground hover:text-foreground"
+          >
+            ×
+          </button>
+        </div>
+      ))}
+      <button type="button" onClick={addEntry} className="text-xs text-primary hover:underline">
+        + Add rename
+      </button>
     </div>
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function DtypeMappingEditor({
+  mapping,
+  columns,
+  onChange,
+}: {
+  mapping: Record<string, string>;
+  columns: string[];
+  onChange: (mapping: Record<string, string>) => void;
+}) {
+  const entries = Object.entries(mapping);
+
+  const updateEntry = (index: number, col: string, dtype: string) => {
+    const next = { ...mapping };
+    const oldKey = entries[index]?.[0];
+    if (oldKey && oldKey !== col) delete next[oldKey];
+    if (col) next[col] = dtype;
+    onChange(next);
+  };
+
+  const addEntry = () => {
+    const col = columns.find((c) => !(c in mapping)) ?? '';
+    onChange({ ...mapping, [col]: 'str' });
+  };
+
+  const removeEntry = (key: string) => {
+    const next = { ...mapping };
+    delete next[key];
+    onChange(next);
+  };
+
   return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-xs font-medium text-foreground">{label}</span>
-      {children}
-    </label>
+    <div className="flex flex-col gap-2">
+      {entries.map(([col, dtype], i) => (
+        <div key={`${col}-${i}`} className="flex gap-1">
+          <Select value={col} onValueChange={(v) => updateEntry(i, v, dtype)}>
+            <SelectTrigger className="flex-1 text-xs">
+              <SelectValue placeholder="Column" />
+            </SelectTrigger>
+            <SelectContent>
+              {columns.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={dtype} onValueChange={(v) => updateEntry(i, col, v)}>
+            <SelectTrigger className="w-28 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {DTYPE_OPTIONS.map((d) => (
+                <SelectItem key={d} value={d}>
+                  {d}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <button
+            type="button"
+            onClick={() => removeEntry(col)}
+            className="px-1 text-xs text-muted-foreground hover:text-foreground"
+          >
+            ×
+          </button>
+        </div>
+      ))}
+      <button type="button" onClick={addEntry} className="text-xs text-primary hover:underline">
+        + Add cast
+      </button>
+    </div>
   );
 }
 
@@ -267,11 +439,10 @@ function GroupByAggregations({
 
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-xs font-medium">Aggregations</span>
       {aggregations.map((agg, i) => (
         <div key={i} className="flex gap-2">
           <Select value={agg.column} onValueChange={(v) => updateAgg(i, 'column', v)}>
-            <SelectTrigger className="flex-1">
+            <SelectTrigger className="flex-1 text-xs">
               <SelectValue placeholder="Column" />
             </SelectTrigger>
             <SelectContent>
@@ -283,7 +454,7 @@ function GroupByAggregations({
             </SelectContent>
           </Select>
           <Select value={agg.func} onValueChange={(v) => updateAgg(i, 'func', v)}>
-            <SelectTrigger className="w-24">
+            <SelectTrigger className="w-24 text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -296,13 +467,81 @@ function GroupByAggregations({
           </Select>
         </div>
       ))}
-      <button
-        type="button"
-        onClick={addAgg}
-        className="text-xs text-primary hover:underline"
-      >
+      <button type="button" onClick={addAgg} className="text-xs text-primary hover:underline">
         + Add aggregation
       </button>
+    </div>
+  );
+}
+
+function InputPreviewSection({
+  nodeId,
+  workflow,
+}: {
+  nodeId: string;
+  workflow: ReturnType<typeof useWorkflowStore.getState>['workflow'];
+}) {
+  const [open, setOpen] = useState(false);
+  const byNodeId = useRuntimeStore((s) => s.byNodeId);
+
+  const upstreamEdges = workflow.edges.filter((e) => e.target === nodeId);
+  if (upstreamEdges.length === 0) return null;
+
+  return (
+    <div className="border-t border-border pt-3">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-1 text-xs font-medium text-foreground"
+      >
+        {open ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
+        Input preview
+      </button>
+      {open && (
+        <div className="mt-2 flex flex-col gap-3">
+          {upstreamEdges.map((edge) => {
+            const upstream = workflow.nodes.find((n) => n.id === edge.source);
+            const preview = byNodeId.get(edge.source)?.preview;
+            if (!upstream) return null;
+            return (
+              <div key={edge.id} className="rounded-md border border-border p-2">
+                <p className="mb-1 text-[10px] font-medium text-muted-foreground">
+                  {upstream.id}
+                  {edge.targetHandle ? ` (${edge.targetHandle})` : ''}
+                </p>
+                {preview && preview.rows.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-[10px]">
+                      <thead>
+                        <tr>
+                          {preview.columns.map((col) => (
+                            <th key={col.name} className="px-1 text-left font-medium">
+                              {col.name}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {preview.rows.slice(0, 5).map((row, i) => (
+                          <tr key={i}>
+                            {preview.columns.map((col) => (
+                              <td key={col.name} className="px-1 text-muted-foreground">
+                                {String(row[col.name] ?? '')}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-muted-foreground">No preview available</p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

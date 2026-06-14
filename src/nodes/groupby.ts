@@ -87,7 +87,7 @@ export const groupby: NodeDefinition = {
   inspectorSchema() {
     return [
       { kind: 'columns', key: 'groupColumns', label: 'Group columns' },
-      { kind: 'text', key: 'aggregations', label: 'Aggregations' },
+      { kind: 'aggregations', key: 'aggregations', label: 'Aggregations' },
     ];
   },
 

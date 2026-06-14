@@ -20,7 +20,7 @@ export function generatePipelineCode(workflow: Pick<Workflow, 'nodes' | 'edges' 
 
   for (const node of sorted) {
     const def = getNodeDefinition(node.type);
-    const inputVars = getInputVars(node.id, workflow.edges);
+    const inputVars = getInputVars(node.id, workflow.edges, def.inputs);
     const outputVar = `node_${node.id}`;
     lines.push(`# ${def.label}${node.title ? `: ${node.title}` : ''}`);
     lines.push(def.compile(node.config, inputVars, outputVar, paramRecord, { mode: 'export' }));
@@ -39,7 +39,7 @@ export function generateNodeCode(
 
   const def = getNodeDefinition(node.type);
   const paramRecord = paramsToRecord(workflow.params);
-  const inputVars = getInputVars(node.id, workflow.edges);
+  const inputVars = getInputVars(nodeId, workflow.edges, def.inputs);
   const outputVar = `node_${node.id}`;
 
   return def.compile(node.config, inputVars, outputVar, paramRecord, { mode: 'export' });
@@ -50,16 +50,31 @@ export function validateConnection(
   targetType: string,
   edges: WorkflowEdge[],
   targetId: string,
+  targetHandle?: string | null,
 ): string | null {
   const def = getNodeDefinition(targetType as Workflow['nodes'][0]['type']);
-  const existingInputs = edges.filter((e) => e.target === targetId).length;
+  const incoming = edges.filter((e) => e.target === targetId);
 
   if (def.category === 'source') {
     return 'Source nodes cannot have inputs';
   }
 
-  if (existingInputs >= def.inputs.length) {
+  if (incoming.length >= def.inputs.length) {
     return `${def.label} already has the maximum number of inputs`;
+  }
+
+  const usedHandles = new Set(
+    incoming.map((e) => e.targetHandle ?? def.inputs[0]?.id).filter(Boolean),
+  );
+
+  if (def.inputs.length > 1) {
+    const handle = targetHandle ?? def.inputs.find((p) => !usedHandles.has(p.id))?.id;
+    if (!handle) {
+      return `${def.label} has no available input ports`;
+    }
+    if (usedHandles.has(handle)) {
+      return `Input port "${handle}" is already connected`;
+    }
   }
 
   const sourceDef = getNodeDefinition(sourceType as Workflow['nodes'][0]['type']);

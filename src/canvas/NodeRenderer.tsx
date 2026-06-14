@@ -54,13 +54,27 @@ export const NodeRenderer = memo(function NodeRenderer({ data, selected }: NodeP
         selected && 'ring-2 ring-primary ring-offset-2 ring-offset-background',
       )}
     >
-      {showInput && (
-        <Handle
-          type="target"
-          position={Position.Left}
-          className="!z-10 !h-3 !w-3 !bg-primary"
-        />
-      )}
+      {showInput &&
+        (def.inputs.length > 1 ? (
+          def.inputs.map((port, index) => (
+            <Handle
+              key={port.id}
+              type="target"
+              position={Position.Left}
+              id={port.id}
+              style={{ top: `${((index + 1) / (def.inputs.length + 1)) * 100}%` }}
+              className="!z-10 !h-3 !w-3 !bg-primary"
+              title={port.label}
+            />
+          ))
+        ) : (
+          <Handle
+            type="target"
+            position={Position.Left}
+            id={def.inputs[0]?.id ?? 'input'}
+            className="!z-10 !h-3 !w-3 !bg-primary"
+          />
+        ))}
 
       <div className="border-b border-border px-3 py-2">
         <p className="text-xs font-semibold text-foreground">{def.label}</p>

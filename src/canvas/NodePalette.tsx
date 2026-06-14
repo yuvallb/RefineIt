@@ -1,3 +1,20 @@
+import {
+  ArrowUpDown,
+  Columns3,
+  Combine,
+  Download,
+  Eraser,
+  FileJson,
+  FileSpreadsheet,
+  Filter,
+  FunctionSquare,
+  GitMerge,
+  Layers,
+  PaintBucket,
+  TextCursorInput,
+  Type,
+} from 'lucide-react';
+
 import { getNodesByCategory } from '@/nodes/registry';
 import type { NodeType } from '@/lib/types';
 import { useWorkflowStore } from '@/state/workflow-store';
@@ -7,6 +24,23 @@ const CATEGORY_LABELS = {
   transform: 'Transform',
   output: 'Output',
 } as const;
+
+const NODE_ICONS: Partial<Record<NodeType, React.ComponentType<{ className?: string }>>> = {
+  'source.csv': FileSpreadsheet,
+  'source.json': FileJson,
+  filter: Filter,
+  select: Columns3,
+  rename: TextCursorInput,
+  derive: FunctionSquare,
+  sort: ArrowUpDown,
+  groupby: Layers,
+  join: GitMerge,
+  concat: Combine,
+  dropna: Eraser,
+  fillna: PaintBucket,
+  cast: Type,
+  output: Download,
+};
 
 export function NodePalette() {
   const grouped = getNodesByCategory();
@@ -35,18 +69,22 @@ export function NodePalette() {
               {CATEGORY_LABELS[category]}
             </p>
             <div className="flex flex-col gap-1">
-              {nodes.map((node) => (
-                <button
-                  key={node.type}
-                  type="button"
-                  draggable
-                  onDragStart={(e) => onDragStart(e, node.type)}
-                  onClick={() => onAddClick(node.type)}
-                  className="cursor-grab rounded-md border border-border bg-background px-2.5 py-1.5 text-left text-xs hover:bg-muted active:cursor-grabbing"
-                >
-                  {node.label}
-                </button>
-              ))}
+              {nodes.map((node) => {
+                const Icon = NODE_ICONS[node.type];
+                return (
+                  <button
+                    key={node.type}
+                    type="button"
+                    draggable
+                    onDragStart={(e) => onDragStart(e, node.type)}
+                    onClick={() => onAddClick(node.type)}
+                    className="flex cursor-grab items-center gap-2 rounded-md border border-border bg-background px-2.5 py-1.5 text-left text-xs hover:bg-muted active:cursor-grabbing"
+                  >
+                    {Icon && <Icon className="size-3.5 shrink-0 text-muted-foreground" />}
+                    {node.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
         );

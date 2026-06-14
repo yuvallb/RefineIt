@@ -1,26 +1,7 @@
+import { extractBracketColumns, isExpressionSafe, normalizeExpression } from './expression';
 import type { NodeDefinition } from './types';
 
-const BLOCKED_PATTERNS = [
-  /\bimport\b/i,
-  /\bexec\b/i,
-  /\beval\s*\(/i,
-  /__/,
-  /\bopen\s*\(/i,
-  /\bgetattr\b/i,
-  /\bsetattr\b/i,
-  /\bglobals\b/i,
-  /\blocals\b/i,
-  /\bos\./i,
-  /\bsys\./i,
-];
-
-function translateExpression(expression: string): string {
-  return expression.replace(/\{(\w+)\}/g, "params['$1']");
-}
-
-export function isExpressionSafe(expression: string): boolean {
-  return !BLOCKED_PATTERNS.some((pattern) => pattern.test(expression));
-}
+export { isExpressionSafe } from './expression';
 
 export const filter: NodeDefinition = {
   type: 'filter',
@@ -48,14 +29,10 @@ export const filter: NodeDefinition = {
 
     const upstream = inputSchemas[0] ?? [];
     if (upstream.length > 0) {
-      const colMatch = expression.match(/\[["']([^"']+)["']\]/g);
-      if (colMatch) {
-        const colNames = new Set(upstream.map((c) => c.name));
-        for (const match of colMatch) {
-          const col = match.slice(2, -2);
-          if (!colNames.has(col)) {
-            errors.push({ field: 'expression', message: `Column "${col}" not found upstream` });
-          }
+      const colNames = new Set(upstream.map((c) => c.name));
+      for (const col of extractBracketColumns(expression)) {
+        if (!colNames.has(col)) {
+          errors.push({ field: 'expression', message: `Column "${col}" not found upstream` });
         }
       }
     }
@@ -67,7 +44,7 @@ export const filter: NodeDefinition = {
     void _params;
     const raw = typeof config.expression === 'string' ? config.expression.trim() : '';
     const input = inputVars[0];
-    const normalized = translateExpression(raw).replace(/\bdf\b/g, input);
+    const normalized = normalizeExpression(raw, input);
 
     return `${outputVar} = ${input}[${input}.eval(${JSON.stringify(normalized)})]`;
   },

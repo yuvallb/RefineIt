@@ -14,9 +14,12 @@ export type InspectorField =
   | { kind: 'text'; key: string; label: string }
   | { kind: 'number'; key: string; label: string }
   | { kind: 'select'; key: string; label: string; options: string[] }
-  | { kind: 'column'; key: string; label: string }
-  | { kind: 'columns'; key: string; label: string }
+  | { kind: 'column'; key: string; label: string; schemaIndex?: number }
+  | { kind: 'columns'; key: string; label: string; schemaIndex?: number }
   | { kind: 'expression'; key: string; label: string }
+  | { kind: 'mapping'; key: string; label: string }
+  | { kind: 'dtype-mapping'; key: string; label: string }
+  | { kind: 'aggregations'; key: string; label: string }
   | { kind: 'param-ref'; key: string; label: string };
 
 export type CompileMode = 'execution' | 'export';

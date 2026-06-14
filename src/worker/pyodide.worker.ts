@@ -4,6 +4,7 @@ import { loadPyodide, version, type PyodideInterface } from 'pyodide';
 import type {
   ExecutePipelineRequest,
   ExecutePipelineResult,
+  ExpressionValidationResult,
   LoadCsvOptions,
   LoadCsvResult,
   ProfileNodeResult,
@@ -161,6 +162,17 @@ const kernelApi = {
       return { profile: toSerializable(profile) as ProfileNodeResult['profile'] };
     } catch (err) {
       return { error: parsePythonException(err) };
+    }
+  },
+
+  async validateExpression(expr: string): Promise<ExpressionValidationResult> {
+    try {
+      const api = await ensureInit();
+      const result = api.runPython(`validate_expression(${JSON.stringify(expr)})`);
+      const parsed = toSerializable(result) as ExpressionValidationResult;
+      return parsed;
+    } catch (err) {
+      return { valid: false, error: parsePythonException(err).message };
     }
   },
 };

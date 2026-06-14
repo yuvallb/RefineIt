@@ -1,4 +1,5 @@
-import type { WorkflowEdge, WorkflowNode } from '@/lib/types';
+import type { WorkflowEdge, WorkflowNode, ColumnSchema, NodeRuntimeState } from '@/lib/types';
+import type { NodeInputPort } from '@/nodes/types';
 
 export class CycleError extends Error {
   constructor() {
@@ -28,8 +29,51 @@ export function getDownstreamNodeIds(nodeId: string, edges: WorkflowEdge[]): str
   return [...downstream];
 }
 
-export function getInputVars(nodeId: string, edges: WorkflowEdge[]): string[] {
-  return getUpstreamNodeIds(nodeId, edges).map((id) => `node_${id}`);
+export function getInputVars(
+  nodeId: string,
+  edges: WorkflowEdge[],
+  inputPorts?: NodeInputPort[],
+): string[] {
+  const incoming = edges.filter((e) => e.target === nodeId);
+
+  if (!inputPorts || inputPorts.length <= 1) {
+    return incoming.map((e) => `node_${e.source}`);
+  }
+
+  const varByHandle = new Map<string, string>();
+  for (const edge of incoming) {
+    const handle = edge.targetHandle ?? inputPorts[0]?.id;
+    if (handle) {
+      varByHandle.set(handle, `node_${edge.source}`);
+    }
+  }
+
+  return inputPorts
+    .map((port) => varByHandle.get(port.id))
+    .filter((v): v is string => typeof v === 'string');
+}
+
+export function getUpstreamSchemas(
+  nodeId: string,
+  edges: WorkflowEdge[],
+  runtimeByNode: Map<string, NodeRuntimeState>,
+  inputPorts?: NodeInputPort[],
+): ColumnSchema[][] {
+  const incoming = edges.filter((e) => e.target === nodeId);
+
+  if (!inputPorts || inputPorts.length <= 1) {
+    return incoming.map((e) => runtimeByNode.get(e.source)?.preview?.columns ?? []);
+  }
+
+  const schemaByHandle = new Map<string, ColumnSchema[]>();
+  for (const edge of incoming) {
+    const handle = edge.targetHandle ?? inputPorts[0]?.id;
+    if (handle) {
+      schemaByHandle.set(handle, runtimeByNode.get(edge.source)?.preview?.columns ?? []);
+    }
+  }
+
+  return inputPorts.map((port) => schemaByHandle.get(port.id) ?? []);
 }
 
 export function topoSort(nodes: WorkflowNode[], edges: WorkflowEdge[]): WorkflowNode[] {
