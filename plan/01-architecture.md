@@ -1,0 +1,107 @@
+# Architecture
+
+## Guiding constraints
+
+1. **Zero backend** — parsing, execution, storage, and sharing all run in the browser.
+2. **Privacy / local-first** — user data never leaves the machine unless explicitly exported.
+3. **Pyodide execution** — Pandas/NumPy run in a Web Worker to keep the UI responsive.
+4. **Workflow vs. data separation** — shareable artifacts contain logic + parameters only, never datasets.
+
+## High-level diagram
+
+```mermaid
+flowchart TB
+  subgraph UI["Main thread (React)"]
+    Canvas["DAG Canvas (React Flow)"]
+    Inspector["Node Inspector / Params"]
+    Preview["Preview Grid + Profiler"]
+    CodeView["Code View / Export"]
+    Store["Zustand store (graph, selection, params)"]
+  end
+
+  subgraph Persist["Browser storage"]
+    IDB[("IndexedDB (Dexie)\ndatasets, workflows, versions")]
+    URL["URL hash (#w=...)\ncompressed workflow"]
+  end
+
+  subgraph Worker["Web Worker"]
+    Kernel["Execution Kernel\n(topo sort, cache, incremental)"]
+    Pyodide["Pyodide (pandas / numpy)"]
+  end
+
+  Canvas <--> Store
+  Inspector <--> Store
+  Store -- "compile + run request" --> Kernel
+  Kernel <--> Pyodide
+  Kernel -- "preview JSON / profile / errors" --> Preview
+  Store <--> IDB
+  Store <--> URL
+  CodeView <-- "generated code" --- Store
+```
+
+## Thread model
+
+### Main thread (React)
+
+- Renders the DAG canvas, node inspector, preview grid, profiler, and code view.
+- Holds the **serializable workflow graph** in Zustand.
+- Sends run requests to the worker; receives lightweight preview/profile payloads.
+- Never holds full DataFrames.
+
+### Web Worker (Pyodide kernel)
+
+- Loads and initializes Pyodide (lazy, on first use).
+- Maintains a Python namespace keyed by node ID (`node_<id>` → DataFrame).
+- Topologically sorts the DAG, compiles node configs to Python snippets, executes them.
+- Caches results via content fingerprints; invalidates downstream on edit.
+- Returns only small JSON previews and profile stats across the worker boundary.
+
+**Why a worker is non-negotiable:** Pyodide is ~6–10 MB and Python execution is CPU-heavy. Running on the main thread would freeze pan/zoom/selection on the canvas.
+
+## Data flow
+
+### Import
+
+1. User drags a file (CSV/JSON) into the browser.
+2. Main thread reads the file as text/binary.
+3. File bytes are passed to the worker.
+4. Worker loads into Pandas (`read_csv`, `read_json`).
+5. Worker returns preview JSON + profile stats.
+6. Full DataFrame stays in the worker; a copy of the raw file is stored in IndexedDB for reload.
+
+### Transform
+
+1. User edits a node config or adds/removes an edge.
+2. Store marks the affected node + all downstream nodes as stale.
+3. Store sends a partial recompute request to the worker.
+4. Worker re-executes only stale nodes (incremental).
+5. Worker emits updated previews per node.
+6. Main thread updates the preview grid and code view.
+
+### Share
+
+1. User clicks "Share".
+2. Store serializes workflow (nodes, edges, params) — **no data**.
+3. JSON is gzip-compressed and encoded as a URL hash (`#w=...`).
+4. Recipient opens the link, uploads their own dataset, runs the same pipeline.
+
+### Persist
+
+1. Autosave writes current workflow + version snapshots to IndexedDB.
+2. On reload, restore workflow from IndexedDB; re-import datasets from stored files.
+3. Re-run the pipeline to repopulate worker-side DataFrames.
+
+## Deployment (GitHub Pages)
+
+- Static build via Vite; no server-side logic.
+- Set Vite `base` to the repo path (e.g. `/TransformStudio/`).
+- Add SPA 404 fallback (`404.html` → `index.html`) for client-side routing.
+- Standard Pyodide does **not** require COOP/COEP headers, so GitHub Pages works without special config.
+- Optional: service worker to cache Pyodide runtime assets across visits.
+
+## Security considerations
+
+- All Python execution is sandboxed inside Pyodide (no filesystem, no network by default).
+- Shared URLs contain only workflow logic — no user data.
+- No `eval` of user-supplied Python in v1 (custom Python node deferred).
+- Expression nodes (filter, derive) use a constrained expression parser, not raw `exec`.
