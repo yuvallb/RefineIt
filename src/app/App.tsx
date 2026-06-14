@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/components/ui/tab
 
 import { PyodideProvider } from '@/hooks/usePyodide';
 import { useExecution } from '@/hooks/useExecution';
+import { useWorkflow } from '@/hooks/useWorkflow';
 import { installTestBridge } from '@/test/bridge';
 import { useUiStore } from '@/state/ui-store';
 import { Footer } from './layout/Footer';
@@ -19,6 +20,7 @@ if (import.meta.env.DEV) {
 }
 
 function Workspace() {
+  useWorkflow();
   useExecution();
   const bottomPanelOpen = useUiStore((s) => s.bottomPanelOpen);
   const rightPanelTab = useUiStore((s) => s.rightPanelTab);

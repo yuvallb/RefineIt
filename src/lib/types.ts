@@ -108,6 +108,42 @@ export interface Workflow {
   updatedAt: string;
 }
 
+export type WorkflowRecord = Workflow;
+
+export interface DatasetRecord {
+  id: string;
+  workflowId: string;
+  nodeId: string;
+  filename: string;
+  mimeType: string;
+  data: ArrayBuffer;
+  importedAt: string;
+}
+
+export interface VersionSnapshot {
+  id: string;
+  workflowId: string;
+  parentId: string | null;
+  message: string;
+  workflow: Workflow;
+  createdAt: string;
+}
+
+export interface ConfigFieldDiff {
+  field: string;
+  oldValue: unknown;
+  newValue: unknown;
+}
+
+export interface WorkflowDiff {
+  added: string[];
+  removed: string[];
+  modified: string[];
+  unchanged: string[];
+  configDiffs: Record<string, ConfigFieldDiff[]>;
+  paramsChanged: boolean;
+}
+
 export type NodeStatus = 'idle' | 'running' | 'stale' | 'success' | 'error';
 
 export interface NodeRuntimeState {

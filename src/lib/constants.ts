@@ -3,3 +3,5 @@ export const MAX_PROFILE_ROWS = 100_000;
 export const WORKFLOW_SCHEMA_VERSION = 1;
 export const EXECUTION_DEBOUNCE_MS = 400;
 export const PROFILE_FETCH_DEBOUNCE_MS = 150;
+export const AUTOSAVE_DEBOUNCE_MS = 2000;
+export const AUTO_SNAPSHOT_EDIT_COUNT = 50;

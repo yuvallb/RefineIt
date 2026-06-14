@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Play, Share2, Download } from 'lucide-react';
+import { History, Play, Share2, Download, FilePlus, GitCompare } from 'lucide-react';
 
 import { downloadPythonScript } from '@/export/python-script';
 import { useExecution } from '@/hooks/useExecution';
 import { Button } from '@/ui/components/ui/button';
 import { ParamDialog } from '@/ui/ParamDialog';
+import { VersionHistory } from '@/ui/VersionHistory';
+import { useUiStore } from '@/state/ui-store';
 import { useWorkflowStore } from '@/state/workflow-store';
 
 export function Header() {
@@ -13,9 +15,18 @@ export function Header() {
   const { runPipeline } = useExecution();
   const [paramDialogOpen, setParamDialogOpen] = useState(false);
 
+  const saveStatus = useUiStore((s) => s.saveStatus);
+  const [versionOpen, setVersionOpen] = useState(false);
+  const [openSaveOnMount, setOpenSaveOnMount] = useState(false);
+  const compareMode = useUiStore((s) => s.compareMode);
+  const setCompareMode = useUiStore((s) => s.setCompareMode);
+
   const handleExport = () => {
     downloadPythonScript(workflow);
   };
+
+  const saveLabel =
+    saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved' : null;
 
   return (
     <>
@@ -26,8 +37,57 @@ export function Header() {
           </span>
           <span className="text-sm font-semibold tracking-tight">Transform Studio</span>
           <span className="text-xs text-muted-foreground">— {workflow.name}</span>
+          {saveLabel && (
+            <span
+              className="text-xs text-muted-foreground"
+              data-testid="save-status"
+              aria-live="polite"
+            >
+              {saveLabel}
+            </span>
+          )}
+          {compareMode && (
+            <span className="rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+              Comparing: {compareMode.baseLabel} → {compareMode.targetLabel}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
+          {compareMode && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCompareMode(null)}
+              aria-label="Exit compare mode"
+            >
+              <GitCompare className="size-4" />
+              Exit compare
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setOpenSaveOnMount(false);
+              setVersionOpen(true);
+            }}
+            aria-label="Version history"
+          >
+            <History className="size-4" />
+            History
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setOpenSaveOnMount(true);
+              setVersionOpen(true);
+            }}
+            aria-label="Save version"
+          >
+            <FilePlus className="size-4" />
+            Save version
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -57,6 +117,15 @@ export function Header() {
         open={paramDialogOpen}
         onOpenChange={setParamDialogOpen}
         onRun={() => void runPipeline()}
+      />
+
+      <VersionHistory
+        open={versionOpen}
+        onOpenChange={(open) => {
+          setVersionOpen(open);
+          if (!open) setOpenSaveOnMount(false);
+        }}
+        openSaveOnMount={openSaveOnMount}
       />
     </>
   );

@@ -14,6 +14,7 @@ import '@xyflow/react/dist/style.css';
 
 import { validateConnection } from '@/engine/codegen';
 import type { WorkflowEdge, WorkflowNode } from '@/lib/types';
+import { useUiStore } from '@/state/ui-store';
 import { useWorkflowStore } from '@/state/workflow-store';
 
 import { NodeRenderer, type TransformNodeData } from './NodeRenderer';
@@ -47,21 +48,43 @@ interface FlowCanvasProps {
 export function FlowCanvas({ onDropFile }: FlowCanvasProps) {
   const workflow = useWorkflowStore((s) => s.workflow);
   const selectedNodeId = useWorkflowStore((s) => s.selectedNodeId);
+  const compareMode = useUiStore((s) => s.compareMode);
   const addEdgeToStore = useWorkflowStore((s) => s.addEdge);
   const removeEdge = useWorkflowStore((s) => s.removeEdge);
   const removeNode = useWorkflowStore((s) => s.removeNode);
   const updateNodePosition = useWorkflowStore((s) => s.updateNodePosition);
   const selectNode = useWorkflowStore((s) => s.selectNode);
 
-  const nodes = useMemo(
-    () =>
-      toFlowNodes(workflow.nodes).map((n) => ({
-        ...n,
-        selected: n.id === selectedNodeId,
-      })),
-    [workflow.nodes, selectedNodeId],
-  );
-  const edges = useMemo(() => toFlowEdges(workflow.edges), [workflow.edges]);
+  const nodes = useMemo(() => {
+    const flowNodes = toFlowNodes(workflow.nodes).map((n) => ({
+      ...n,
+      selected: n.id === selectedNodeId,
+      draggable: !compareMode,
+    }));
+
+    if (compareMode) {
+      for (const removedId of compareMode.diff.removed) {
+        const removedNode = compareMode.baseWorkflow.nodes.find((n) => n.id === removedId);
+        if (removedNode && !flowNodes.some((n) => n.id === removedId)) {
+          flowNodes.push({
+            id: removedId,
+            type: 'transformNode',
+            position: removedNode.position,
+            draggable: false,
+            selectable: true,
+            selected: removedId === selectedNodeId,
+            data: { workflowNode: removedNode, isGhost: true },
+          });
+        }
+      }
+    }
+
+    return flowNodes;
+  }, [workflow.nodes, selectedNodeId, compareMode]);
+  const edges = useMemo(() => {
+    const activeEdges = compareMode ? compareMode.targetWorkflow.edges : workflow.edges;
+    return toFlowEdges(activeEdges);
+  }, [workflow.edges, compareMode]);
 
   const onNodesChange: OnNodesChange<Node<TransformNodeData>> = useCallback(
     (changes) => {
@@ -162,8 +185,11 @@ export function FlowCanvas({ onDropFile }: FlowCanvasProps) {
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
+        onConnect={compareMode ? undefined : onConnect}
         onPaneClick={onPaneClick}
+        nodesDraggable={!compareMode}
+        nodesConnectable={!compareMode}
+        elementsSelectable
         fitView
         deleteKeyCode={['Backspace', 'Delete']}
         defaultEdgeOptions={{ type: 'smoothstep' }}

@@ -5,6 +5,7 @@ import { getUpstreamSchemasForNode, getValidateContext } from '@/engine/pipeline
 import { getNodeDefinition } from '@/nodes/registry';
 import type { InspectorField } from '@/nodes/types';
 import { useRuntimeStore } from '@/state/runtime-store';
+import { useUiStore } from '@/state/ui-store';
 import { useWorkflowStore } from '@/state/workflow-store';
 import { ColumnPicker } from '@/ui/ColumnPicker';
 import { ExpressionInput } from '@/ui/ExpressionInput';
@@ -24,21 +25,27 @@ export function Inspector() {
   const selectedNodeId = useWorkflowStore((s) => s.selectedNodeId);
   const updateNodeConfig = useWorkflowStore((s) => s.updateNodeConfig);
   const byNodeId = useRuntimeStore((s) => s.byNodeId);
+  const compareMode = useUiStore((s) => s.compareMode);
 
   const selectedNode = workflow.nodes.find((n) => n.id === selectedNodeId);
+  const ghostNode =
+    compareMode && selectedNodeId
+      ? compareMode.baseWorkflow.nodes.find((n) => n.id === selectedNodeId)
+      : null;
+  const displayNode = selectedNode ?? ghostNode;
   const runtime = selectedNodeId ? byNodeId.get(selectedNodeId) : null;
 
   const upstreamSchemas = useMemo(
-    () => (selectedNode ? getUpstreamSchemasForNode(selectedNode, workflow, byNodeId) : []),
-    [selectedNode, workflow, byNodeId],
+    () => (displayNode ? getUpstreamSchemasForNode(displayNode, workflow, byNodeId) : []),
+    [displayNode, workflow, byNodeId],
   );
 
   const validationErrors = useMemo(() => {
-    if (!selectedNode) return [];
-    const def = getNodeDefinition(selectedNode.type);
-    const context = getValidateContext(selectedNode, workflow, byNodeId, def.inputs);
-    return def.validate(selectedNode.config, upstreamSchemas, context);
-  }, [selectedNode, upstreamSchemas, workflow, byNodeId]);
+    if (!displayNode || compareMode) return [];
+    const def = getNodeDefinition(displayNode.type);
+    const context = getValidateContext(displayNode, workflow, byNodeId, def.inputs);
+    return def.validate(displayNode.config, upstreamSchemas, context);
+  }, [displayNode, upstreamSchemas, workflow, byNodeId, compareMode]);
 
   const errorsByField = useMemo(() => {
     const map = new Map<string, string[]>();
@@ -52,7 +59,7 @@ export function Inspector() {
   }, [validationErrors]);
 
   useEffect(() => {
-    if (!selectedNode || selectedNode.type !== 'groupby') return;
+    if (!selectedNode || selectedNode.type !== 'groupby' || compareMode) return;
     const schema = upstreamSchemas[0] ?? [];
     if (schema.length === 0) return;
 
@@ -69,9 +76,9 @@ export function Inspector() {
         agg.column ? agg : { ...agg, column: schema[0].name },
       ),
     });
-  }, [selectedNode, upstreamSchemas, updateNodeConfig]);
+  }, [selectedNode, upstreamSchemas, updateNodeConfig, compareMode]);
 
-  if (!selectedNode) {
+  if (!displayNode) {
     return (
       <div className="flex h-full items-center justify-center p-4 text-sm text-muted-foreground">
         Select a node to edit its configuration
@@ -79,19 +86,60 @@ export function Inspector() {
     );
   }
 
-  const def = getNodeDefinition(selectedNode.type);
-  const config = selectedNode.config;
+  const def = getNodeDefinition(displayNode.type);
+  const config = displayNode.config;
+  const configDiffs =
+    compareMode && selectedNodeId ? (compareMode.diff.configDiffs[selectedNodeId] ?? []) : [];
+  const isReadOnly = Boolean(compareMode);
 
   const update = (key: string, value: unknown) => {
-    updateNodeConfig(selectedNode.id, { [key]: value });
+    if (isReadOnly) return;
+    updateNodeConfig(displayNode.id, { [key]: value });
   };
 
   return (
     <div className="flex h-full flex-col gap-4 overflow-y-auto p-4">
       <div>
         <h3 className="text-sm font-semibold">{def.label}</h3>
-        <p className="text-xs text-muted-foreground">Node ID: {selectedNode.id}</p>
+        <p className="text-xs text-muted-foreground">Node ID: {displayNode.id}</p>
+        {compareMode && (
+          <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+            Compare mode — editing disabled
+          </p>
+        )}
       </div>
+
+      {compareMode && configDiffs.length > 0 && (
+        <div className="rounded-md border border-amber-500/50 bg-amber-500/10 p-3">
+          <p className="mb-2 text-xs font-semibold text-amber-800 dark:text-amber-200">
+            Config changes
+          </p>
+          <div className="space-y-2">
+            {configDiffs.map((diff) => (
+              <div key={diff.field} className="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <p className="font-medium text-muted-foreground">{diff.field} (before)</p>
+                  <pre className="mt-0.5 whitespace-pre-wrap break-all rounded bg-background/80 p-1.5">
+                    {JSON.stringify(diff.oldValue, null, 2)}
+                  </pre>
+                </div>
+                <div>
+                  <p className="font-medium text-muted-foreground">{diff.field} (after)</p>
+                  <pre className="mt-0.5 whitespace-pre-wrap break-all rounded bg-background/80 p-1.5">
+                    {JSON.stringify(diff.newValue, null, 2)}
+                  </pre>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {compareMode && configDiffs.length === 0 && compareMode.diff.modified.includes(displayNode.id) && (
+        <div className="rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-200">
+          Node modified (position, edges, or non-config fields changed)
+        </div>
+      )}
 
       {runtime?.error && (
         <div className="rounded-md border border-red-500/50 bg-red-500/10 p-3 text-xs text-red-600">
@@ -120,7 +168,9 @@ export function Inspector() {
         />
       ))}
 
-      {def.inputs.length > 0 && <InputPreviewSection nodeId={selectedNode.id} workflow={workflow} />}
+      {def.inputs.length > 0 && !compareMode && (
+        <InputPreviewSection nodeId={displayNode.id} workflow={workflow} />
+      )}
     </div>
   );
 }

@@ -10,6 +10,8 @@ import {
 import { toast } from 'sonner';
 
 import { kernelClient } from '@/engine/kernel-client';
+import { restoreWorkflowFromStorage } from '@/hooks/useWorkflow';
+import { useWorkflowStore } from '@/state/workflow-store';
 import type {
   KernelStatus,
   LoadCsvOptions,
@@ -50,11 +52,17 @@ export function PyodideProvider({ children }: { children: ReactNode }) {
 
     toast.error('Python runtime crashed. Restarting…');
 
-    void kernelClient.restart().catch((err: unknown) => {
-      const message = err instanceof Error ? err.message : String(err);
-      setLastError({ message });
-      toast.error(`Failed to restart Python runtime: ${message}`);
-    });
+    void (async () => {
+      try {
+        await kernelClient.restart();
+        await restoreWorkflowFromStorage();
+        useWorkflowStore.getState().markAllStale();
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        setLastError({ message });
+        toast.error(`Failed to restart Python runtime: ${message}`);
+      }
+    })();
   }, [status]);
 
   const init = useCallback(async () => {

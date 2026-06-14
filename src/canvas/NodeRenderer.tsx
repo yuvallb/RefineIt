@@ -5,12 +5,23 @@ import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { getNodeDefinition } from '@/nodes/registry';
 import type { WorkflowNode } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { getNodeDiffStatus } from '@/versioning/diff';
 import { useRuntimeStore } from '@/state/runtime-store';
+import { useUiStore } from '@/state/ui-store';
 import { useWorkflowStore } from '@/state/workflow-store';
 
 export interface TransformNodeData {
   workflowNode: WorkflowNode;
+  isGhost?: boolean;
   [key: string]: unknown;
+}
+
+function diffBorder(status: ReturnType<typeof getNodeDiffStatus>): string | null {
+  if (status === 'added') return 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/30';
+  if (status === 'removed') return 'border-red-500 border-dashed bg-red-50/50 dark:bg-red-950/30';
+  if (status === 'modified') return 'border-amber-500 bg-amber-50/50 dark:bg-amber-950/30';
+  if (status === 'unchanged') return 'border-border opacity-60';
+  return null;
 }
 
 function statusBorder(status: string | undefined, isStale: boolean): string {
@@ -35,6 +46,11 @@ export const NodeRenderer = memo(function NodeRenderer({ data, selected }: NodeP
   const def = getNodeDefinition(workflowNode.type);
   const runtime = useRuntimeStore((s) => s.byNodeId.get(workflowNode.id));
   const isStale = useWorkflowStore((s) => s.staleNodeIds.has(workflowNode.id));
+  const compareMode = useUiStore((s) => s.compareMode);
+  const diffStatus = compareMode
+    ? getNodeDiffStatus(workflowNode.id, compareMode.diff)
+    : null;
+  const isGhost = Boolean(nodeData.isGhost);
   const preview = runtime?.preview;
   const status = runtime?.status ?? 'idle';
 
@@ -46,12 +62,17 @@ export const NodeRenderer = memo(function NodeRenderer({ data, selected }: NodeP
 
   const showInput = def.inputs.length > 0;
 
+  const borderClass = diffStatus
+    ? diffBorder(diffStatus)
+    : statusBorder(status, isStale && status !== 'success');
+
   return (
     <div
       className={cn(
         'min-w-[180px] rounded-lg border-2 bg-card shadow-sm transition-colors',
-        statusBorder(status, isStale && status !== 'success'),
-        selected && 'ring-2 ring-primary ring-offset-2 ring-offset-background',
+        borderClass,
+        selected && !diffStatus && 'ring-2 ring-primary ring-offset-2 ring-offset-background',
+        isGhost && 'pointer-events-none opacity-80',
       )}
     >
       {showInput &&

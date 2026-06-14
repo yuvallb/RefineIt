@@ -55,6 +55,12 @@ interface WorkflowState {
   removeParam: (name: string) => void;
   setParamOverrides: (overrides: Record<string, unknown>) => void;
   clearParamOverrides: () => void;
+  loadWorkflowState: (workflow: Workflow, datasets?: Record<string, NodeDataset>) => void;
+  newWorkflow: () => Workflow;
+  isHydrated: boolean;
+  setHydrated: (hydrated: boolean) => void;
+  editCount: number;
+  incrementEditCount: () => void;
 }
 
 export const useWorkflowStore = create<WorkflowState>((set, get) => ({
@@ -64,6 +70,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   datasets: {},
   deletedNodeIds: [],
   paramOverrides: {},
+  isHydrated: false,
+  editCount: 0,
 
   addNode(type, position) {
     const def = getNodeDefinition(type);
@@ -82,6 +90,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         updatedAt: new Date().toISOString(),
       },
       staleNodeIds: new Set([...state.staleNodeIds, id]),
+      editCount: state.isHydrated ? state.editCount + 1 : state.editCount,
     }));
 
     return id;
@@ -107,6 +116,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         staleNodeIds: stale,
         datasets: remainingDatasets,
         deletedNodeIds: [...state.deletedNodeIds, nodeId],
+        editCount: state.isHydrated ? state.editCount + 1 : state.editCount,
       };
     });
   },
@@ -125,6 +135,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
           updatedAt: new Date().toISOString(),
         },
         staleNodeIds: stale,
+        editCount: state.isHydrated ? state.editCount + 1 : state.editCount,
       };
     });
   },
@@ -134,7 +145,9 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       workflow: {
         ...state.workflow,
         nodes: state.workflow.nodes.map((n) => (n.id === nodeId ? { ...n, position } : n)),
+        updatedAt: new Date().toISOString(),
       },
+      editCount: state.isHydrated ? state.editCount + 1 : state.editCount,
     }));
   },
 
@@ -184,6 +197,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         updatedAt: new Date().toISOString(),
       },
       staleNodeIds: stale,
+      editCount: state.isHydrated ? state.editCount + 1 : state.editCount,
     });
 
     return id;
@@ -204,6 +218,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
           updatedAt: new Date().toISOString(),
         },
         staleNodeIds: stale,
+        editCount: state.isHydrated ? state.editCount + 1 : state.editCount,
       };
     });
   },
@@ -270,6 +285,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   setWorkflowName(name) {
     set((state) => ({
       workflow: { ...state.workflow, name, updatedAt: new Date().toISOString() },
+      editCount: state.isHydrated ? state.editCount + 1 : state.editCount,
     }));
   },
 
@@ -297,6 +313,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         params: [...state.workflow.params, entry],
         updatedAt: new Date().toISOString(),
       },
+      editCount: state.isHydrated ? state.editCount + 1 : state.editCount,
     });
 
     get().markStaleForParams([entry.name]);
@@ -339,6 +356,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         params,
         updatedAt: new Date().toISOString(),
       },
+      editCount: state.isHydrated ? state.editCount + 1 : state.editCount,
     });
 
     get().markStaleForParams([name]);
@@ -358,6 +376,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
           updatedAt: new Date().toISOString(),
         },
         paramOverrides: overrides,
+        editCount: state.isHydrated ? state.editCount + 1 : state.editCount,
       };
     });
     get().markStaleForParams([name]);
@@ -373,6 +392,40 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     if (Object.keys(previous).length === 0) return;
     set({ paramOverrides: {} });
     get().markStaleForParams(Object.keys(previous));
+  },
+
+  loadWorkflowState(workflow, datasets = {}) {
+    set({
+      workflow,
+      selectedNodeId: null,
+      staleNodeIds: new Set(workflow.nodes.map((n) => n.id)),
+      datasets,
+      deletedNodeIds: [],
+      paramOverrides: {},
+      editCount: 0,
+    });
+  },
+
+  newWorkflow() {
+    const workflow = createEmptyWorkflow();
+    set({
+      workflow,
+      selectedNodeId: null,
+      staleNodeIds: new Set(),
+      datasets: {},
+      deletedNodeIds: [],
+      paramOverrides: {},
+      editCount: 0,
+    });
+    return workflow;
+  },
+
+  setHydrated(hydrated) {
+    set({ isHydrated: hydrated });
+  },
+
+  incrementEditCount() {
+    set((state) => ({ editCount: state.editCount + 1 }));
   },
 }));
 
