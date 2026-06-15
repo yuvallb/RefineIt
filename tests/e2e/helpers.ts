@@ -48,3 +48,17 @@ export async function connectSourceToFilter(page: Page) {
     if (source && filter) bridge?.connectNodes(source, filter);
   });
 }
+
+export async function saveWorkflowVersion(page: Page, message: string) {
+  await page.getByRole('button', { name: 'Save version' }).click();
+  await page.getByPlaceholder('e.g. Added join node').fill(message);
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByText('Version saved')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+}
+
+export async function openVersionHistory(page: Page) {
+  await page.getByRole('button', { name: 'Version history' }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+}

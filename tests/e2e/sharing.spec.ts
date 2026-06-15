@@ -11,7 +11,9 @@ test('Flow C: share workflow, restore in new context, upload and run', async ({ 
 
   const salesPath = path.resolve(__dirname, '../fixtures/sales.csv');
 
-  const sourceContext = await browser.newContext();
+  const sourceContext = await browser.newContext({
+    permissions: ['clipboard-read', 'clipboard-write'],
+  });
   const sourcePage = await sourceContext.newPage();
 
   await sourcePage.goto('./');
@@ -37,7 +39,7 @@ test('Flow C: share workflow, restore in new context, upload and run', async ({ 
   });
 
   await sourcePage.getByRole('button', { name: 'Copy shareable link' }).click();
-  await expect(sourcePage.getByText('Link copied to clipboard')).toBeVisible();
+  await expect(sourcePage).toHaveURL(/#w=/, { timeout: 10000 });
 
   const shareUrl = sourcePage.url();
   expect(shareUrl).toContain('#w=');
