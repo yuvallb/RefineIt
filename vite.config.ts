@@ -2,6 +2,7 @@
 import path from 'node:path';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
+import { playwright } from '@vitest/browser-playwright';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
@@ -12,10 +13,38 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  optimizeDeps: {
+    exclude: ['pyodide'],
+  },
+  worker: {
+    format: 'es',
+  },
   test: {
     globals: true,
-    environment: 'jsdom',
-    setupFiles: './tests/setup.ts',
-    exclude: ['**/node_modules/**', '**/dist/**', 'tests/e2e/**'],
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'unit',
+          environment: 'jsdom',
+          setupFiles: './tests/setup.ts',
+          include: ['tests/unit/**'],
+          exclude: ['**/node_modules/**', '**/dist/**', 'tests/e2e/**', 'tests/integration/**'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'browser',
+          include: ['tests/integration/**'],
+          testTimeout: 120000,
+          browser: {
+            enabled: true,
+            provider: playwright(),
+            instances: [{ browser: 'chromium' }],
+          },
+        },
+      },
+    ],
   },
 });

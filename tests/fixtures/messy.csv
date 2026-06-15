@@ -1,0 +1,6 @@
+name,age,score,note
+Alice,30,95.5,ok
+Bob,,88,
+Charlie,not_a_number,72,mixed
+,25,,
+Diana,40,,missing score
