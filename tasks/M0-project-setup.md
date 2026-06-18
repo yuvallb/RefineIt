@@ -145,7 +145,7 @@
 
 - Three-region layout stub per [`plan/UX-guidelines.md`](../plan/UX-guidelines.md):
   - **Header:** logo/title, placeholder action buttons (Share, Export — disabled)
-  - **Main:** empty workspace area with "Transform Studio" placeholder
+  - **Main:** empty workspace area with "RefineIt" placeholder
   - **Footer:** status bar stub ("Ready")
 - Create layout components:
   - `src/app/layout/Header.tsx`

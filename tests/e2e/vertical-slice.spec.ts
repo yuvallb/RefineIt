@@ -22,9 +22,9 @@ test('app loads with workspace layout', async ({ page }) => {
   });
 
   await page.goto('./');
-  await expect(page).toHaveTitle(/Transform Studio/);
+  await expect(page).toHaveTitle(/RefineIt/);
   await expect(page.getByRole('banner')).toBeVisible();
-  await expect(page.getByText('Transform Studio').first()).toBeVisible();
+  await expect(page.getByText('RefineIt').first()).toBeVisible();
   await expect(page.getByRole('contentinfo')).toContainText('Ready');
   await expect(page.getByText('Node Library')).toBeVisible();
 

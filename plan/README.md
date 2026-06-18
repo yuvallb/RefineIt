@@ -1,6 +1,6 @@
-# Transform Studio — Build Plan
+# RefineIt — Build Plan
 
-This folder contains the architecture and implementation plan for building **Transform Studio** as a **client-side-only** application powered by **Pyodide**.
+This folder contains the architecture and implementation plan for building **RefineIt** as a **client-side-only** application powered by **Pyodide**.
 
 ## Confirmed decisions
 
@@ -42,7 +42,7 @@ This folder contains the architecture and implementation plan for building **Tra
 
 ## One-sentence summary
 
-> Transform Studio is a GitHub-like visual workspace for data transformations that runs Python (Pandas) entirely in the browser via Pyodide, making workflows shareable, reproducible, and code-exportable without infrastructure.
+> RefineIt is a GitHub-like visual workspace for data transformations that runs Python (Pandas) entirely in the browser via Pyodide, making workflows shareable, reproducible, and code-exportable without infrastructure.
 
 ## Delivery order
 

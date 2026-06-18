@@ -37,7 +37,7 @@ Estimated relative effort:
 - [ ] Configure ESLint + Prettier
 - [ ] Set up Vitest + React Testing Library
 - [ ] Set up Playwright for E2E
-- [ ] Configure Vite `base` for GitHub Pages (`/TransformStudio/`)
+- [ ] Configure Vite `base` for GitHub Pages (`/RefineIt/`)
 - [ ] Add SPA 404 fallback for GitHub Pages
 - [ ] GitHub Actions: lint → typecheck → test → build → deploy to Pages
 - [ ] Basic app shell: header, empty main area, footer
@@ -216,7 +216,7 @@ CSV Source → Filter → GroupBy → Output
 
 ### DoD
 
-- Export notebook → open in Jupyter → run all cells → same result as in Transform Studio.
+- Export notebook → open in Jupyter → run all cells → same result as in RefineIt.
 - README Flow E works for both Python script and notebook formats.
 
 ---

@@ -20,7 +20,7 @@ describe('App', () => {
     });
 
     expect(screen.getByRole('banner')).toBeInTheDocument();
-    expect(screen.getByText('Transform Studio', { selector: 'span.font-semibold' })).toBeInTheDocument();
+    expect(screen.getByText('RefineIt', { selector: 'span.font-semibold' })).toBeInTheDocument();
     expect(screen.getByRole('contentinfo')).toBeInTheDocument();
     expect(screen.getByText('Ready')).toBeInTheDocument();
     expect(screen.getByText('Node Library')).toBeInTheDocument();

@@ -47,7 +47,7 @@ The History dialog already has a "New workflow" button but it is buried, not dis
 ### Header placement
 
 ```
-[T] Transform Studio — Pipeline name  [Open ▾]  [History]  [Save version]  [Run…]  [Share]  [Export]
+[R] RefineIt — Pipeline name  [Open ▾]  [History]  [Save version]  [Run…]  [Share]  [Export]
 ```
 
 The button sits left-of-center, grouped with the workflow identity area rather than the action buttons.

@@ -102,7 +102,7 @@ function validateShareablePayload(parsed: unknown): ShareableWorkflow {
   }
   if (record.schemaVersion > WORKFLOW_SCHEMA_VERSION) {
     throw new Error(
-      `Unsupported workflow version ${record.schemaVersion}. Please update Transform Studio.`,
+      `Unsupported workflow version ${record.schemaVersion}. Please update RefineIt.`,
     );
   }
   if (typeof record.name !== 'string') {

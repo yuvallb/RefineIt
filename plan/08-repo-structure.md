@@ -1,9 +1,9 @@
 # Repository Structure
 
-Proposed layout for the Transform Studio codebase.
+Proposed layout for the RefineIt codebase.
 
 ```
-TransformStudio/
+RefineIt/
 ├── .github/
 │   └── workflows/
 │       └── deploy.yml          # CI: lint, test, build, deploy to Pages

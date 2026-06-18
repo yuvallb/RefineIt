@@ -1,4 +1,4 @@
-# Transform Studio — Milestone Tasks
+# RefineIt — Milestone Tasks
 
 Detailed implementation task breakdown for each delivery milestone. These documents expand [`plan/07-milestones.md`](../plan/07-milestones.md) with file-level guidance, testing requirements, and acceptance criteria.
 
@@ -38,7 +38,7 @@ M2 is the **critical path** — prioritize end-to-end pipeline correctness over 
 - **Pyodide in a Web Worker** — never on the main thread.
 - **Workflow ≠ data** — shared URLs and exports contain logic + params only.
 - **Preview cap** — max 100 rows cross the worker boundary.
-- **GitHub Pages** — Vite `base: '/TransformStudio/'`.
+- **GitHub Pages** — Vite `base: '/RefineIt/'`.
 - **Deferred features** — Excel, dbt/SQL, custom Python node, Arrow IPC (see [`plan/README.md`](../plan/README.md)).
 
 ## Verification commands (from M0 onward)

@@ -102,7 +102,7 @@ flowchart TB
 ## Deployment (GitHub Pages)
 
 - Static build via Vite; no server-side logic.
-- Set Vite `base` to the repo path (e.g. `/TransformStudio/`).
+- Set Vite `base` to the repo path (e.g. `/RefineIt/`).
 - Add SPA 404 fallback (`404.html` → `index.html`) for client-side routing.
 - Standard Pyodide does **not** require COOP/COEP headers, so GitHub Pages works without special config.
 - Optional: service worker to cache Pyodide runtime assets across visits.
