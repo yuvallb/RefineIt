@@ -22,7 +22,32 @@ export function hasParamRefs(expression: string): boolean {
   return /\{(\w+)\}/.test(expression);
 }
 
-export function normalizeExpression(expression: string, inputVar: string): string {
+function columnRefForEval(columnName: string): string {
+  if (/^[a-zA-Z_]\w*$/.test(columnName)) {
+    return columnName;
+  }
+  return `\`${columnName.replace(/`/g, '\\`')}\``;
+}
+
+function replaceDfBracketColumns(expression: string): string {
+  return expression.replace(
+    /\bdf\s*\[\s*(["'])((?:\\.|(?!\1).)*)\1\s*\]/g,
+    (_match, _quote, columnName: string) => columnRefForEval(columnName),
+  );
+}
+
+/** Normalize user `df[...]` syntax for pandas DataFrame.eval (bare column names). */
+export function normalizeExpressionForEval(expression: string): string {
+  let normalized = translateExpression(expression.trim());
+  normalized = replaceDfBracketColumns(normalized);
+  normalized = normalized.replace(/\bdf\.([a-zA-Z_]\w*)/g, (_match, columnName: string) =>
+    columnRefForEval(columnName),
+  );
+  return normalized;
+}
+
+/** Normalize user `df` references for direct boolean indexing / assign (Python, not eval). */
+export function normalizeExpressionForMask(expression: string, inputVar: string): string {
   return translateExpression(expression.trim()).replace(/\bdf\b/g, inputVar);
 }
 

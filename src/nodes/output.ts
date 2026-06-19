@@ -1,5 +1,16 @@
 import type { NodeDefinition } from './types';
 
+export type OutputFormat = 'csv' | 'json';
+
+export function replaceFilenameExtension(filename: string, format: OutputFormat): string {
+  const ext = format;
+  const lastDot = filename.lastIndexOf('.');
+  if (lastDot <= 0) {
+    return `${filename}.${ext}`;
+  }
+  return `${filename.slice(0, lastDot)}.${ext}`;
+}
+
 export const output: NodeDefinition = {
   type: 'output',
   label: 'Output',

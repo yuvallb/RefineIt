@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 
 import { getUpstreamSchemasForNode, getValidateContext } from '@/engine/pipeline';
 import { getNodeDefinition } from '@/nodes/registry';
+import { replaceFilenameExtension, type OutputFormat } from '@/nodes/output';
 import type { InspectorField } from '@/nodes/types';
 import { diffWorkflowParams } from '@/versioning/diff';
 import { useRuntimeStore } from '@/state/runtime-store';
@@ -108,6 +109,16 @@ export function Inspector() {
 
   const update = (key: string, value: unknown) => {
     if (isReadOnly) return;
+    if (displayNode.type === 'output' && key === 'format') {
+      const format: OutputFormat = value === 'json' ? 'json' : 'csv';
+      const currentFilename =
+        typeof config.filename === 'string' ? config.filename : 'pipeline_output.csv';
+      updateNodeConfig(displayNode.id, {
+        format,
+        filename: replaceFilenameExtension(currentFilename, format),
+      });
+      return;
+    }
     updateNodeConfig(displayNode.id, { [key]: value });
   };
 
@@ -247,7 +258,7 @@ function InspectorFieldRenderer({
   const renderField = () => {
     switch (field.kind) {
       case 'text': {
-        const textReadOnly = readOnly || field.key === 'filename';
+        const textReadOnly = readOnly || (field.key === 'filename' && nodeCategory === 'source');
         if (field.key === 'filename' && nodeCategory === 'source' && !readOnly) {
           return (
             <div className="flex gap-2">

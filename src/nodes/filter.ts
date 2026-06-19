@@ -2,7 +2,8 @@ import { extractParamRefs } from '@/engine/param-substitute';
 import {
   hasParamRefs,
   isExpressionSafe,
-  normalizeExpression,
+  normalizeExpressionForEval,
+  normalizeExpressionForMask,
   validateExpressionColumns,
 } from './expression';
 import type { NodeDefinition } from './types';
@@ -55,12 +56,12 @@ export const filter: NodeDefinition = {
     void _context;
     const raw = typeof config.expression === 'string' ? config.expression.trim() : '';
     const input = inputVars[0];
-    const normalized = normalizeExpression(raw, input);
-
     if (hasParamRefs(raw)) {
+      const normalized = normalizeExpressionForMask(raw, input);
       return `${outputVar} = ${input}[${normalized}]`;
     }
 
+    const normalized = normalizeExpressionForEval(raw);
     return `${outputVar} = ${input}[${input}.eval(${JSON.stringify(normalized)})]`;
   },
 

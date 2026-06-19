@@ -1,5 +1,9 @@
 import { getNodeDefinition } from '@/nodes/registry';
-import { normalizeExpression } from '@/nodes/expression';
+import {
+  hasParamRefs,
+  normalizeExpressionForEval,
+  normalizeExpressionForMask,
+} from '@/nodes/expression';
 import { kernelClient } from '@/engine/kernel-client';
 import { peekCsvColumnNames } from '@/lib/csv-preview';
 
@@ -185,7 +189,9 @@ async function validateExpressionForNode(
   }
 
   const input = inputVars[0] ?? 'df';
-  const normalized = normalizeExpression(expression, input);
+  const normalized = hasParamRefs(expression)
+    ? normalizeExpressionForMask(expression, input)
+    : normalizeExpressionForEval(expression);
   const result = await kernelClient.validateExpression(normalized);
   if (!result.valid) {
     return result.error ?? 'Expression failed security validation';

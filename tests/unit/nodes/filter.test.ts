@@ -27,7 +27,7 @@ describe('filter param substitution', () => {
 
   it('uses eval for non-param expressions in execution mode', () => {
     const code = filter.compile(
-      { expression: 'revenue > 1000' },
+      { expression: 'df["revenue"] > 1000' },
       ['node_a'],
       'node_b',
       {},

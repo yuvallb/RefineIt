@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { filter } from '@/nodes/filter';
 import { groupby } from '@/nodes/groupby';
-import { output } from '@/nodes/output';
+import { output, replaceFilenameExtension } from '@/nodes/output';
 import { sourceCsv } from '@/nodes/source-csv';
 import { isExpressionSafe } from '@/nodes/filter';
 
@@ -52,7 +52,7 @@ describe('filter', () => {
       'node_b',
       {},
     );
-    expect(code).toBe('node_b = node_a[node_a.eval("node_a[\\"revenue\\"] > 1000")]');
+    expect(code).toBe('node_b = node_a[node_a.eval("revenue > 1000")]');
   });
 
   it('requires expression', () => {
@@ -96,6 +96,13 @@ describe('groupby', () => {
 });
 
 describe('output', () => {
+  it('replaces filename extension when format changes', () => {
+    expect(replaceFilenameExtension('pipeline_output.csv', 'json')).toBe('pipeline_output.json');
+    expect(replaceFilenameExtension('pipeline_output.json', 'csv')).toBe('pipeline_output.csv');
+    expect(replaceFilenameExtension('my.file.csv', 'json')).toBe('my.file.json');
+    expect(replaceFilenameExtension('noextension', 'json')).toBe('noextension.json');
+  });
+
   it('passes through in execution mode', () => {
     const code = output.compile(
       { format: 'csv', filename: 'out.csv' },
