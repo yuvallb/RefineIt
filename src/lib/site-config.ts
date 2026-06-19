@@ -7,11 +7,13 @@ export const SITE = {
     'Imported datasets stay in your browser (IndexedDB). Shared links never include your files.',
   welcomeHint: 'Drop a CSV/JSON file anywhere on the canvas to start.',
   welcomeHintStorageKey: 'refineit.dismissedWelcomeHint',
+  license: 'Open Source - Apache License 2.0',
   urls: {
     repo: 'https://github.com/yuvallb/RefineIt',
     issues: 'https://github.com/yuvallb/RefineIt/issues/new/choose',
     readme: 'https://github.com/yuvallb/RefineIt#readme',
     site: 'https://yuvallb.github.io/RefineIt/',
+    license: 'https://github.com/yuvallb/RefineIt/blob/main/LICENSE',
   },
   valueProps: [
     {

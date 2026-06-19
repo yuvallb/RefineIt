@@ -22,10 +22,6 @@ describe('AboutDialog', () => {
       'href',
       SITE.urls.issues,
     );
-    expect(screen.getByRole('link', { name: /read the readme/i })).toHaveAttribute(
-      'href',
-      SITE.urls.readme,
-    );
   }, 15_000);
 
   it('opens from ui store and closes on escape', async () => {

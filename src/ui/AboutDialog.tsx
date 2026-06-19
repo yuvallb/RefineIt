@@ -65,15 +65,10 @@ export function AboutDialog() {
                 Report an issue
               </a>
             </Button>
-            <Button variant="outline" size="sm" asChild>
-              <a href={SITE.urls.readme} target="_blank" rel="noopener noreferrer">
-                Read the README
-              </a>
-            </Button>
           </section>
 
           <footer className="border-t border-border pt-3 text-xs text-muted-foreground">
-            <p>v{__APP_VERSION__} · Open source — see repository for license</p>
+            <p>v{__APP_VERSION__} · <a href={SITE.urls.license} target="_blank" rel="noopener noreferrer">{SITE.license}</a></p>
           </footer>
         </div>
       </DialogContent>

@@ -65,7 +65,6 @@ export function DemoPicker() {
 
   if (nodeCount > 0) return null;
 
-  const welcomeSummary = SITE.valueProps.slice(0, 2);
 
   return (
     <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center p-4">
@@ -92,16 +91,6 @@ export function DemoPicker() {
               <p className="text-xs text-muted-foreground">{SITE.tagline}</p>
             </div>
           </div>
-
-          <ul className="mb-3 space-y-1 text-xs text-muted-foreground">
-            {welcomeSummary.map((prop) => (
-              <li key={prop.title}>
-                <span className="font-medium text-foreground">{prop.title}</span>
-                {' — '}
-                {prop.description}
-              </li>
-            ))}
-          </ul>
 
           <button
             type="button"

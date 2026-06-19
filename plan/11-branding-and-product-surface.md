@@ -183,7 +183,6 @@ New component: `src/ui/AboutDialog.tsx`.
 5. **Links** — Button group or link list:
    - View on GitHub (repo)
    - Report an issue
-   - Read the README
 6. **Footer** — App version (if B4 done) + license note ("Open source — see repository for license")
 
 Use existing shadcn `Dialog`; match Help dialog width (`max-w-md` or slightly wider `max-w-lg` for bullets).
