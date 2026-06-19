@@ -9,9 +9,9 @@ import {
 import { listVersions } from '@/data/version-repo';
 import { listWorkflows, saveWorkflow } from '@/data/workflow-repo';
 import { DEMOS, type Demo } from '@/lib/demos';
+import { loadDemoWorkflow } from '@/lib/load-demo';
 import { relativeTime } from '@/lib/relativeTime';
 import type { WorkflowRecord } from '@/lib/types';
-import { deserializeWorkflow } from '@/sharing/serialize';
 import { useRuntimeStore } from '@/state/runtime-store';
 import { useUiStore } from '@/state/ui-store';
 import { useWorkflowStore } from '@/state/workflow-store';
@@ -83,18 +83,9 @@ export function WorkflowSwitcher() {
     async (demo: Demo) => {
       setLoadingId(demo.id);
       try {
-        const response = await fetch(demo.file);
-        if (!response.ok) {
-          throw new Error(`Failed to load demo (${response.status})`);
-        }
-        const text = await response.text();
-        const workflow = deserializeWorkflow(text);
-        clearRuntime();
-        loadWorkflowState(workflow, {});
-        markAllStale();
+        await loadDemoWorkflow(demo);
         setSharedImport(false);
         setCompareMode(null);
-        await saveWorkflow(workflow);
         toast.success(`Loaded demo: ${demo.label}`);
         setOpen(false);
       } catch (err) {
@@ -104,7 +95,7 @@ export function WorkflowSwitcher() {
         setLoadingId(null);
       }
     },
-    [clearRuntime, loadWorkflowState, markAllStale, setSharedImport, setCompareMode],
+    [setSharedImport, setCompareMode],
   );
 
   const handleLoadRecent = useCallback(

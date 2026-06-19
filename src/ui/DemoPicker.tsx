@@ -2,11 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { saveWorkflow } from '@/data/workflow-repo';
 import { DEMOS } from '@/lib/demos';
+import { loadDemoWorkflow } from '@/lib/load-demo';
 import { SITE } from '@/lib/site-config';
-import { deserializeWorkflow } from '@/sharing/serialize';
-import { useRuntimeStore } from '@/state/runtime-store';
 import { useUiStore } from '@/state/ui-store';
 import { useWorkflowStore } from '@/state/workflow-store';
 import { BrandLogo } from '@/ui/BrandLogo';
@@ -14,8 +12,6 @@ import { Button } from '@/ui/components/ui/button';
 
 export function DemoPicker() {
   const nodeCount = useWorkflowStore((s) => s.workflow.nodes.length);
-  const loadWorkflowState = useWorkflowStore((s) => s.loadWorkflowState);
-  const markAllStale = useWorkflowStore((s) => s.markAllStale);
   const setAboutDialogOpen = useUiStore((s) => s.setAboutDialogOpen);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [showHint, setShowHint] = useState(false);
@@ -38,33 +34,20 @@ export function DemoPicker() {
     }
   }, []);
 
-  const loadDemo = useCallback(
-    async (demo: (typeof DEMOS)[number]) => {
-      setLoadingId(demo.id);
-      try {
-        const response = await fetch(demo.file);
-        if (!response.ok) {
-          throw new Error(`Failed to load demo (${response.status})`);
-        }
-        const text = await response.text();
-        const workflow = deserializeWorkflow(text);
-        useRuntimeStore.getState().reset();
-        loadWorkflowState(workflow, {});
-        markAllStale();
-        await saveWorkflow(workflow);
-        toast.success(`Loaded demo: ${demo.label}`);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        toast.error(`Failed to load demo: ${message}`);
-      } finally {
-        setLoadingId(null);
-      }
-    },
-    [loadWorkflowState, markAllStale],
-  );
+  const loadDemo = useCallback(async (demo: (typeof DEMOS)[number]) => {
+    setLoadingId(demo.id);
+    try {
+      await loadDemoWorkflow(demo);
+      toast.success(`Loaded demo: ${demo.label}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      toast.error(`Failed to load demo: ${message}`);
+    } finally {
+      setLoadingId(null);
+    }
+  }, []);
 
   if (nodeCount > 0) return null;
-
 
   return (
     <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center p-4">

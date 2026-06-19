@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { loadDatasetsForWorkflow } from '@/data/dataset-repo';
 import { listVersions } from '@/data/version-repo';
 import { listWorkflows, saveWorkflow } from '@/data/workflow-repo';
+import { loadDemoWorkflow } from '@/lib/load-demo';
 import type { Workflow, WorkflowRecord } from '@/lib/types';
 import { useWorkflowStore } from '@/state/workflow-store';
 import { WorkflowSwitcher } from '@/ui/WorkflowSwitcher';
@@ -23,6 +24,10 @@ vi.mock('@/data/version-repo', () => ({
 vi.mock('@/data/dataset-repo', () => ({
   loadDatasetsForWorkflow: vi.fn(),
   buildDatasetsMapForWorkflow: vi.fn(() => ({})),
+}));
+
+vi.mock('@/lib/load-demo', () => ({
+  loadDemoWorkflow: vi.fn(),
 }));
 
 const sampleWorkflow = (overrides: Partial<Workflow> = {}): Workflow => ({
@@ -80,19 +85,16 @@ describe('WorkflowSwitcher', () => {
     expect(screen.getByTestId('recent-item-wf-other')).toBeInTheDocument();
   });
 
-  it('loads a demo via fetch and saveWorkflow', async () => {
+  it('loads a demo via loadDemoWorkflow', async () => {
     const demoWorkflow = sampleWorkflow({
       id: 'demo-wf',
       name: 'Sales Analysis',
       nodes: [{ id: 'n1', type: 'filter', position: { x: 0, y: 0 }, config: {} }],
     });
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        ok: true,
-        text: () => Promise.resolve(JSON.stringify(demoWorkflow)),
-      }),
-    );
+    vi.mocked(loadDemoWorkflow).mockImplementation(async () => {
+      useWorkflowStore.getState().loadWorkflowState(demoWorkflow, {});
+      return demoWorkflow;
+    });
 
     const user = userEvent.setup();
     render(<WorkflowSwitcher />);
@@ -100,12 +102,10 @@ describe('WorkflowSwitcher', () => {
     await user.click(screen.getByTestId('demo-item-sales-analysis'));
 
     await waitFor(() => {
-      expect(saveWorkflow).toHaveBeenCalled();
+      expect(loadDemoWorkflow).toHaveBeenCalled();
       expect(useWorkflowStore.getState().workflow.name).toBe('Sales Analysis');
       expect(useWorkflowStore.getState().workflow.nodes).toHaveLength(1);
     });
-
-    vi.unstubAllGlobals();
   });
 
   it('loads a recent workflow from IndexedDB', async () => {
