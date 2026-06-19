@@ -6,7 +6,7 @@ import { playwright } from '@vitest/browser-playwright';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  base: '/TransformStudio/',
+  base: '/RefineIt/',
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {

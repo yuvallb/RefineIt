@@ -1,10 +1,10 @@
-# AGENTS.md — Transform Studio
+# AGENTS.md — RefineIt
 
 Guidance for AI coding agents working on this repository. Read this file before making changes.
 
 ## Project summary
 
-Transform Studio is a **client-side-only** visual data transformation app: users build Pandas pipelines on a DAG canvas, Python runs in the browser via **Pyodide** in a Web Worker, and workflows are shareable without a backend.
+RefineIt is a **client-side-only** visual data transformation app: users build Pandas pipelines on a DAG canvas, Python runs in the browser via **Pyodide** in a Web Worker, and workflows are shareable without a backend.
 
 > One sentence: a GitHub-like visual workspace for data transformations that runs Python (Pandas) entirely in the browser, making workflows shareable, reproducible, and code-exportable without infrastructure.
 
@@ -40,7 +40,7 @@ When plan docs and code disagree, **plan docs win** until the user explicitly ch
 2. **Privacy / local-first** — user datasets stay on the machine unless explicitly exported.
 3. **Pyodide in a Web Worker** — never run Python on the main thread.
 4. **Workflow ≠ data** — shared URLs and exports contain logic + parameters only, never imported files.
-5. **GitHub Pages deployment** — static Vite build; set `base` to `/TransformStudio/`.
+5. **GitHub Pages deployment** — static Vite build; set `base` to `/RefineIt/`.
 6. **Target data size** — design for ~50–100 MB CSVs; preview caps and memory hygiene matter.
 
 ### Deferred (do not implement unless asked)
@@ -237,7 +237,7 @@ Do not snapshot-test canvas layout or histogram pixels.
 |------|------------|
 | UI freeze during Python | Keep all Pandas work in the worker |
 | Memory OOM | Previews only; CoW; delete worker vars on node removal |
-| Large URL shares | gzip + base64url; warn + `.tstudio.json` fallback |
+| Large URL shares | gzip + base64url; warn + `.refineit.json` fallback |
 | Worker crash | Heartbeat + restart + IndexedDB restore |
 | Expression injection | AST whitelist before eval |
 | Skipping milestones | Stop — finish current milestone DoD first |

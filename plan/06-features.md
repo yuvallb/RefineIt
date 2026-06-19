@@ -141,7 +141,7 @@ To avoid external dependencies and keep the bundle size minimal, we will use the
 |-----------|--------|
 | Encoded hash < ~6 KB | URL sharing works in all browsers |
 | Encoded hash 6–50 KB | URL sharing works but may hit browser limits |
-| Encoded hash > 50 KB | Show warning; offer `.tstudio.json` file download instead |
+| Encoded hash > 50 KB | Show warning; offer `.refineit.json` file download instead |
 
 ### Recipient flow
 
@@ -152,8 +152,8 @@ To avoid external dependencies and keep the bundle size minimal, we will use the
 
 ### File fallback
 
-- Export: download `.tstudio.json` (uncompressed workflow).
-- Import: upload `.tstudio.json` to restore workflow.
+- Export: download `.refineit.json` (uncompressed workflow).
+- Import: upload `.refineit.json` to restore workflow.
 
 ## F7: Versioning (Flow F)
 

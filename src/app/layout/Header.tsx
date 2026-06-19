@@ -41,7 +41,7 @@ export function Header() {
           <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-xs font-bold text-primary-foreground">
             T
           </span>
-          <span className="text-sm font-semibold tracking-tight">Transform Studio</span>
+          <span className="text-sm font-semibold tracking-tight">RefineIt</span>
           <span className="text-xs text-muted-foreground">— {workflow.name}</span>
           <WorkflowSwitcher />
           {saveLabel && (

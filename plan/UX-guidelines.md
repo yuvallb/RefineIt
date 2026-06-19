@@ -1,10 +1,10 @@
 Thank you for the clear directions. Limiting the file target to 50–100MB, relying on URL-compressed state sharing, focusing on a graph-first workspace with live data previews, and establishing code-overrides as a fast-follow feature narrows the scope perfectly.
 
-Below is the comprehensive UX/UI Architecture Guide for **TransformStudio**, mapped directly to `README.md` specification requirements.
+Below is the comprehensive UX/UI Architecture Guide for **RefineIt**, mapped directly to `README.md` specification requirements.
 
 ---
 
-# TransformStudio: UX/UI Architecture Guide
+# RefineIt: UX/UI Architecture Guide
 
 ## 1. Design System & Principles
 
@@ -26,7 +26,7 @@ The workspace is organized into a rigid three-panel grid system maximizing horiz
 
 ```
 +---------------------------------------------------------------------------------------------------+
-|  [T] TransformStudio          (v) Pipeline v3  [Share Link] [Export Code] [Memory: 42MB/512MB]    |
+|  [R] RefineIt                 (v) Pipeline v3  [Share Link] [Export Code] [Memory: 42MB/512MB]    |
 +---------------------------------------------------------------------------------------------------+
 |               |                                                                   |               |
 |               |  [Canvas Workspace]                                               | [Data Profile]|
@@ -74,7 +74,7 @@ Triggered immediately upon dragging a CSV file onto the workspace canvas.
 
 ```
 +---------------------------------------------------------------------------------------------------+
-| [T] TransformStudio           Untitled Pipeline *                              [Share] [Export]   |
+| [R] RefineIt                  Untitled Pipeline *                              [Share] [Export]   |
 +---------------------------------------------------------------------------------------------------+
 |  [Library]   |                                                                                    |
 |  Search...   |    +-----------------------------------------+                                     |
@@ -104,7 +104,7 @@ Demonstrates linking sequential functional logic transformations together via a 
 
 ```
 +---------------------------------------------------------------------------------------------------+
-| [T] TransformStudio           Revenue Pipeline v1                              [Share] [Export]   |
+| [R] RefineIt                  Revenue Pipeline v1                              [Share] [Export]   |
 +---------------------------------------------------------------------------------------------------+
 |  [Library]   |                                                                                    |
 |  [-] Transform|   +---------------+        +-------------------------+      +-------------------+ |
@@ -130,7 +130,7 @@ Demonstrates URL-level compression states without a remote datastore engine depe
 
 ```
 +---------------------------------------------------------------------------------------------------+
-| [T] TransformStudio           Revenue Pipeline v1                              [Share] [Export]   |
+| [R] RefineIt                  Revenue Pipeline v1                              [Share] [Export]   |
 +---------------------------------------------------------------------------------------------------+
 |              |                                                                                    |
 |              |      +---------------------------------------------------------------------+       |
@@ -177,7 +177,7 @@ To communicate pipeline validity instantly without overwhelming user logs, nodes
 1. User drops a massive `90MB` file footprint onto the browser app layer.
 
 
-2. A temporary blocking micro-modal alert states: *"Large dataset detected (90MB). TransformStudio will restrict visual grid layouts to the top 10,000 data rows to maintain rapid client performance. Downstream production code exports will always process full datasets."*
+2. A temporary blocking micro-modal alert states: *"Large dataset detected (90MB). RefineIt will restrict visual grid layouts to the top 10,000 data rows to maintain rapid client performance. Downstream production code exports will always process full datasets."*
 
 3. The live workspace grid initializes instantly. A permanent, persistent golden badge header sits immediately above the row grid displaying: `Downsampled Matrix Active`.
 

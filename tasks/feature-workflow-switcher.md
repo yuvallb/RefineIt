@@ -47,7 +47,7 @@ The History dialog already has a "New workflow" button but it is buried, not dis
 ### Header placement
 
 ```
-[T] Transform Studio — Pipeline name  [Open ▾]  [History]  [Save version]  [Run…]  [Share]  [Export]
+[R] RefineIt — Pipeline name  [Open ▾]  [History]  [Save version]  [Run…]  [Share]  [Export]
 ```
 
 The button sits left-of-center, grouped with the workflow identity area rather than the action buttons.
@@ -122,19 +122,19 @@ export const DEMOS = [
     id: 'sales-analysis',
     label: 'Sales analysis',
     description: 'CSV → Filter → GroupBy → Output',
-    file: `${import.meta.env.BASE_URL}demo/sales-analysis.tstudio.json`,
+    file: `${import.meta.env.BASE_URL}demo/sales-analysis.refineit.json`,
   },
   {
     id: 'customer-join',
     label: 'Customer join',
     description: 'Two sources → Join → Select → Output',
-    file: `${import.meta.env.BASE_URL}demo/customer-join.tstudio.json`,
+    file: `${import.meta.env.BASE_URL}demo/customer-join.refineit.json`,
   },
   {
     id: 'parameterized-filter',
     label: 'Parameterized filter',
     description: 'Filter with {country} parameter',
-    file: `${import.meta.env.BASE_URL}demo/parameterized-filter.tstudio.json`,
+    file: `${import.meta.env.BASE_URL}demo/parameterized-filter.refineit.json`,
   },
 ] as const;
 

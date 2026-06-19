@@ -102,7 +102,7 @@ function validateShareablePayload(parsed: unknown): ShareableWorkflow {
   }
   if (record.schemaVersion > WORKFLOW_SCHEMA_VERSION) {
     throw new Error(
-      `Unsupported workflow version ${record.schemaVersion}. Please update Transform Studio.`,
+      `Unsupported workflow version ${record.schemaVersion}. Please update RefineIt.`,
     );
   }
   if (typeof record.name !== 'string') {
@@ -163,7 +163,7 @@ export function downloadWorkflowFile(workflow: Workflow, filename?: string): voi
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
-  anchor.download = filename ?? `${safeName}.tstudio.json`;
+  anchor.download = filename ?? `${safeName}.refineit.json`;
   anchor.click();
   URL.revokeObjectURL(url);
 }

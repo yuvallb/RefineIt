@@ -1,14 +1,14 @@
-# Transform Studio
+# RefineIt
 
-A browser-based visual data transformation tool. Build Pandas pipelines on a DAG canvas — Python runs entirely in your browser via Pyodide. No backend, no uploads to the cloud.
+RefinA visual workspace for reusable data workflows. Build transformations as interactive flow diagrams, execute them locally in the browser using Python and Pandas, and share or export them as reproducible assets without managing infrastructure.
 
-**Live demo:** [https://yuvallb.github.io/TransformStudio/](https://yuvallb.github.io/TransformStudio/)
+**Live demo:** [https://yuvallb.github.io/RefineIt/](https://yuvallb.github.io/RefineIt/)
 
 ---
 
 ## Quick start
 
-1. Open the [live app](https://yuvallb.github.io/TransformStudio/)
+1. Open the [live app](https://yuvallb.github.io/RefineIt/)
 2. Use the **Open ▾** menu in the header (or the empty-canvas demo picker) to load a preset workflow, or drop a CSV/JSON file
 3. Drag nodes from the palette, connect them, and inspect preview/profile/code
 4. **Share** your workflow logic via URL (datasets stay local)
@@ -18,7 +18,7 @@ A browser-based visual data transformation tool. Build Pandas pipelines on a DAG
 
 ```bash
 npm install
-npm run dev          # http://localhost:5173/TransformStudio/
+npm run dev          # http://localhost:5173/RefineIt/
 npm run build        # production build → dist/
 npm run preview      # preview production build
 npm run lint         # ESLint

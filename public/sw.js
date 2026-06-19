@@ -9,9 +9,9 @@ const APP_SHELL_CACHE = 'transform-studio-shell-v1';
 const PYODIDE_CDN_PREFIX = `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/`;
 
 const APP_SHELL_URLS = [
-  '/TransformStudio/',
-  '/TransformStudio/index.html',
-  '/TransformStudio/404.html',
+  '/RefineIt/',
+  '/RefineIt/index.html',
+  '/RefineIt/404.html',
 ];
 
 self.addEventListener('install', (event) => {
@@ -55,7 +55,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Network-first for app shell (HTML, JS, CSS) under GitHub Pages base
-  if (url.origin === self.location.origin && url.pathname.startsWith('/TransformStudio/')) {
+  if (url.origin === self.location.origin && url.pathname.startsWith('/RefineIt/')) {
     event.respondWith(
       fetch(request)
         .then((response) => {
@@ -65,7 +65,7 @@ self.addEventListener('fetch', (event) => {
           }
           return response;
         })
-        .catch(() => caches.match(request).then((r) => r ?? caches.match('/TransformStudio/index.html'))),
+        .catch(() => caches.match(request).then((r) => r ?? caches.match('/RefineIt/index.html'))),
     );
   }
 });

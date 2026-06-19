@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:5173/TransformStudio/';
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:5173/RefineIt/';
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -25,7 +25,7 @@ export default defineConfig({
     ? undefined
     : {
         command: 'npm run dev',
-        url: 'http://localhost:5173/TransformStudio/',
+        url: 'http://localhost:5173/RefineIt/',
         reuseExistingServer: !process.env.CI,
       },
 });
