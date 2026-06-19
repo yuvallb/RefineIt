@@ -163,7 +163,7 @@ export function downloadWorkflowFile(workflow: Workflow, filename?: string): voi
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
-  anchor.download = filename ?? `${safeName}.tstudio.json`;
+  anchor.download = filename ?? `${safeName}.refineit.json`;
   anchor.click();
   URL.revokeObjectURL(url);
 }

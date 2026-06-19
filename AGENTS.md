@@ -237,7 +237,7 @@ Do not snapshot-test canvas layout or histogram pixels.
 |------|------------|
 | UI freeze during Python | Keep all Pandas work in the worker |
 | Memory OOM | Previews only; CoW; delete worker vars on node removal |
-| Large URL shares | gzip + base64url; warn + `.tstudio.json` fallback |
+| Large URL shares | gzip + base64url; warn + `.refineit.json` fallback |
 | Worker crash | Heartbeat + restart + IndexedDB restore |
 | Expression injection | AST whitelist before eval |
 | Skipping milestones | Stop — finish current milestone DoD first |

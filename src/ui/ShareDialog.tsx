@@ -35,7 +35,7 @@ function sizeWarningMessage(level: ShareSizeLevel): string | null {
     return 'This link is fairly large and may not work in all browsers.';
   }
   if (level === 'tooLarge') {
-    return 'This workflow is too large for URL sharing. Download a .tstudio.json file instead.';
+    return 'This workflow is too large for URL sharing. Download a .refineit.json file instead.';
   }
   return null;
 }
@@ -185,7 +185,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
                 <p className="text-xs font-medium text-muted-foreground">File fallback</p>
                 <Button variant="outline" className="justify-start gap-2" onClick={handleDownloadFile}>
                   <Download className="size-4" />
-                  Download .tstudio.json
+                  Download .refineit.json
                 </Button>
                 <Button
                   variant="outline"
@@ -193,12 +193,12 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
                   onClick={() => importInputRef.current?.click()}
                 >
                   <Upload className="size-4" />
-                  Import .tstudio.json
+                  Import .refineit.json
                 </Button>
                 <input
                   ref={importInputRef}
                   type="file"
-                  accept=".json,.tstudio.json,application/json"
+                  accept=".json,.refineit.json,application/json"
                   className="sr-only"
                   aria-label="Import workflow file"
                   onChange={(event) => {

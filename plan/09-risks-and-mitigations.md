@@ -37,7 +37,7 @@
 | **Risk** | Complex workflows produce JSON that exceeds browser URL/hash limits (~2 KB–64 KB depending on browser) |
 | **Likelihood** | Medium — simple workflows fit; complex ones may not |
 | **Impact** | Medium — sharing fails silently or truncates |
-| **Mitigation** | gzip + base64url compression. Size guard with clear warning. `.tstudio.json` file export/import fallback. |
+| **Mitigation** | gzip + base64url compression. Size guard with clear warning. `.refineit.json` file export/import fallback. |
 | **Verification** | Test sharing with 5, 20, 50, and 100 node workflows |
 
 ## R5: Browser memory limits

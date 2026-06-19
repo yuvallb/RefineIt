@@ -232,7 +232,7 @@ CSV Source → Filter → GroupBy → Output
 - [ ] Write to `window.location.hash`
 - [ ] Parse hash on app load → restore workflow
 - [ ] Size guard: warn + offer file fallback for large workflows
-- [ ] `.tstudio.json` file export/import
+- [ ] `.refineit.json` file export/import
 - [ ] "Share" button with copy-to-clipboard
 - [ ] Shared workflow shows "Import your dataset" on source nodes
 

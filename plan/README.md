@@ -12,7 +12,7 @@ This folder contains the architecture and implementation plan for building **Ref
 | UI | Tailwind CSS + shadcn/ui |
 | Python runtime | Pyodide in a Web Worker + Comlink |
 | Storage | IndexedDB via Dexie |
-| Sharing | Compressed URL hash (`#w=...`) + `.tstudio.json` file fallback |
+| Sharing | Compressed URL hash (`#w=...`) + `.refineit.json` file fallback |
 | v1 features | Parameters, versioning, Jupyter notebook export |
 | Target data size | ~50–100 MB |
 | Deployment | GitHub Pages (static) |

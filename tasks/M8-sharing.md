@@ -66,19 +66,19 @@ Per [`plan/06-features.md`](../plan/06-features.md):
 |--------------|--------|
 | < ~6 KB | Silent URL share |
 | 6–50 KB | URL share with info toast |
-| > 50 KB | Warning modal; recommend `.tstudio.json` file export |
+| > 50 KB | Warning modal; recommend `.refineit.json` file export |
 
 Measure encoded string length before writing hash.
 
 ---
 
-## Task 5: `.tstudio.json` file export/import
+## Task 5: `.refineit.json` file export/import
 
 ### Implementation
 
 - Export: uncompressed JSON download (`application/json`)
 - Import: file picker → parse → validate → hydrate workflow store
-- File extension: `.tstudio.json`
+- File extension: `.refineit.json`
 - Include in Share dialog as fallback
 
 ---
@@ -90,7 +90,7 @@ Measure encoded string length before writing hash.
 - `src/ui/ShareDialog.tsx`:
   - **Copy link** button (primary)
   - Shows encoded size estimate
-  - Fallback: **Download .tstudio.json**
+  - Fallback: **Download .refineit.json**
   - Import shared file option
 - Header **Share** button opens dialog
 - Success toast: "Link copied to clipboard"
@@ -157,8 +157,8 @@ expect(JSON.parse(json)).not.toHaveProperty('datasets');
 - [ ] Share workflow → copy URL → open in new tab → workflow restored on canvas.
 - [ ] Recipient uploads dataset → pipeline runs successfully.
 - [ ] Shared payload contains **no** dataset bytes or preview data.
-- [ ] Large workflow (>50 KB encoded) shows warning and offers `.tstudio.json` download.
-- [ ] `.tstudio.json` import restores workflow identically.
+- [ ] Large workflow (>50 KB encoded) shows warning and offers `.refineit.json` download.
+- [ ] `.refineit.json` import restores workflow identically.
 - [ ] Params preserved in shared workflow.
 - [ ] README **Flow C** works end-to-end.
 
