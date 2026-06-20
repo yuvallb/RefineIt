@@ -64,6 +64,8 @@ function mergeFlowNodes(
   });
 }
 
+const SELECTED_NODE_EDGE_STROKE_WIDTH = 3;
+
 function toFlowEdges(workflowEdges: WorkflowEdge[]): Edge[] {
   return workflowEdges.map((e) => ({
     id: e.id,
@@ -73,6 +75,23 @@ function toFlowEdges(workflowEdges: WorkflowEdge[]): Edge[] {
     targetHandle: e.targetHandle,
     animated: true,
   }));
+}
+
+function highlightEdgesForSelectedNode(edges: Edge[], selectedNodeId: string | null): Edge[] {
+  if (!selectedNodeId) return edges;
+
+  return edges.map((edge) => {
+    const connected = edge.source === selectedNodeId || edge.target === selectedNodeId;
+    if (!connected) return edge;
+
+    return {
+      ...edge,
+      style: {
+        ...edge.style,
+        strokeWidth: SELECTED_NODE_EDGE_STROKE_WIDTH,
+      },
+    };
+  });
 }
 
 type GetNodesBounds = ReturnType<typeof useReactFlow>['getNodesBounds'];
@@ -178,39 +197,43 @@ export function FlowCanvas({ onDropFile }: FlowCanvasProps) {
   }, [workflow.nodes, selectedNodeId, compareMode]);
 
   const baseEdges = useMemo(() => {
+    let edges: Edge[];
+
     if (!compareMode) {
-      return toFlowEdges(workflow.edges);
+      edges = toFlowEdges(workflow.edges);
+    } else {
+      const targetEdges = toFlowEdges(compareMode.targetWorkflow.edges);
+      const targetEdgeKeys = new Set(
+        compareMode.targetWorkflow.edges.map(
+          (e) => `${e.source}|${e.target}|${e.sourceHandle ?? ''}|${e.targetHandle ?? ''}`,
+        ),
+      );
+
+      const removedEdgeKeys = new Set(
+        compareMode.baseWorkflow.edges
+          .filter(
+            (e) =>
+              compareMode.diff.removed.includes(e.source) ||
+              compareMode.diff.removed.includes(e.target),
+          )
+          .map((e) => `${e.source}|${e.target}|${e.sourceHandle ?? ''}|${e.targetHandle ?? ''}`),
+      );
+
+      const ghostEdges = compareMode.baseWorkflow.edges
+        .filter((e) => {
+          const key = `${e.source}|${e.target}|${e.sourceHandle ?? ''}|${e.targetHandle ?? ''}`;
+          return removedEdgeKeys.has(key) && !targetEdgeKeys.has(key);
+        })
+        .map((e) => ({
+          ...toFlowEdges([e])[0]!,
+          style: { stroke: 'rgb(239 68 68)', strokeDasharray: '5 5' },
+        }));
+
+      edges = [...targetEdges, ...ghostEdges];
     }
 
-    const targetEdges = toFlowEdges(compareMode.targetWorkflow.edges);
-    const targetEdgeKeys = new Set(
-      compareMode.targetWorkflow.edges.map(
-        (e) => `${e.source}|${e.target}|${e.sourceHandle ?? ''}|${e.targetHandle ?? ''}`,
-      ),
-    );
-
-    const removedEdgeKeys = new Set(
-      compareMode.baseWorkflow.edges
-        .filter(
-          (e) =>
-            compareMode.diff.removed.includes(e.source) ||
-            compareMode.diff.removed.includes(e.target),
-        )
-        .map((e) => `${e.source}|${e.target}|${e.sourceHandle ?? ''}|${e.targetHandle ?? ''}`),
-    );
-
-    const ghostEdges = compareMode.baseWorkflow.edges
-      .filter((e) => {
-        const key = `${e.source}|${e.target}|${e.sourceHandle ?? ''}|${e.targetHandle ?? ''}`;
-        return removedEdgeKeys.has(key) && !targetEdgeKeys.has(key);
-      })
-      .map((e) => ({
-        ...toFlowEdges([e])[0]!,
-        style: { stroke: 'rgb(239 68 68)', strokeDasharray: '5 5' },
-      }));
-
-    return [...targetEdges, ...ghostEdges];
-  }, [workflow.edges, compareMode]);
+    return highlightEdgesForSelectedNode(edges, selectedNodeId);
+  }, [workflow.edges, compareMode, selectedNodeId]);
 
   const [flowNodes, setFlowNodes] = useState<Node<TransformNodeData>[]>(baseNodes);
   const [flowEdges, setFlowEdges] = useState<Edge[]>(baseEdges);
