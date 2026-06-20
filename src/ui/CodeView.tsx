@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import CodeMirror from '@uiw/react-codemirror';
 import { python } from '@codemirror/lang-python';
+import type { Extension } from '@codemirror/state';
 import { oneDark } from '@codemirror/theme-one-dark';
 
 import { generateNodeCode, generatePipelineCode } from '@/engine/codegen';
@@ -21,8 +22,8 @@ export function CodeView() {
     return generatePipelineCode(workflow);
   }, [codeViewMode, selectedNodeId, workflow]);
 
-  const extensions = useMemo(() => {
-    const exts = [python()];
+  const extensions = useMemo((): Extension[] => {
+    const exts: Extension[] = [python()];
     if (colorMode === 'dark') exts.push(oneDark);
     return exts;
   }, [colorMode]);
