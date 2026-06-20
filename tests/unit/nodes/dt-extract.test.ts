@@ -16,7 +16,8 @@ describe('dtExtract', () => {
     );
     expect(code).toContain('.dt.year');
     expect(code).toContain('.dt.month');
-    expect(code).toContain('.assign(');
+    expect(code).toContain('.assign(**{');
+    expect(code).toContain('"created_at_year"');
   });
 
   it('compiles parse when enabled', () => {

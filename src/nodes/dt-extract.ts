@@ -134,7 +134,7 @@ export const dtExtract: NodeDefinition = {
       return `${JSON.stringify(outName)}: ${srcVar}.dt.${accessor}`;
     });
 
-    lines.push(`${outputVar} = ${input}.assign(${assignEntries.join(', ')})`);
+    lines.push(`${outputVar} = ${input}.assign(**{${assignEntries.join(', ')}})`);
     return lines.join('\n');
   },
 
