@@ -7,8 +7,8 @@ import { ProfilePanel } from '@/ui/ProfilePanel';
 import { IncompatibleDataDialog } from '@/ui/IncompatibleDataDialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/components/ui/tabs';
 
-import { FileImportProvider } from '@/hooks/useFileImport';
-import { PyodideProvider } from '@/hooks/usePyodide';
+import { FileImportProvider } from '@/hooks/FileImportProvider';
+import { PyodideProvider } from '@/hooks/PyodideProvider';
 import { useExecution } from '@/hooks/useExecution';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useWorkflow } from '@/hooks/useWorkflow';

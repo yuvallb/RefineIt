@@ -1,28 +1,10 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 
 import { kernelClient } from '@/engine/kernel-client';
+import { PyodideContext } from '@/hooks/pyodide-context';
 import { restoreWorkflowFromStorage } from '@/hooks/useWorkflow';
 import type { KernelStatus, LoadCsvOptions, LoadCsvResult, StructuredError } from '@/lib/types';
-
-interface PyodideContextValue {
-  status: KernelStatus;
-  progressStage: string;
-  lastError: StructuredError | null;
-  init: () => Promise<void>;
-  loadCsv: (bytes: Uint8Array, options?: LoadCsvOptions) => Promise<LoadCsvResult>;
-  restart: () => Promise<void>;
-}
-
-const PyodideContext = createContext<PyodideContextValue | null>(null);
 
 export function PyodideProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<KernelStatus>(kernelClient.getStatus());
@@ -93,14 +75,4 @@ export function PyodideProvider({ children }: { children: ReactNode }) {
   );
 
   return <PyodideContext.Provider value={value}>{children}</PyodideContext.Provider>;
-}
-
-export function usePyodide(): PyodideContextValue {
-  const context = useContext(PyodideContext);
-
-  if (!context) {
-    throw new Error('usePyodide must be used within a PyodideProvider');
-  }
-
-  return context;
 }

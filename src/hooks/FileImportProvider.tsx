@@ -1,13 +1,7 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useRef,
-  type ReactNode,
-} from 'react';
+import { useCallback, useMemo, useRef, type ReactNode } from 'react';
 import { toast } from 'sonner';
 
+import { FileImportContext } from '@/hooks/file-import-context';
 import { detectDelimiter } from '@/lib/delimiter';
 import { LARGE_FILE_WARN_BYTES } from '@/lib/constants';
 import type { NodeType } from '@/lib/types';
@@ -28,20 +22,6 @@ interface ImportContext {
   nodeId?: string;
   position: { x: number; y: number };
 }
-
-interface FileImportContextValue {
-  ingestFile: (
-    file: File,
-    position: { x: number; y: number },
-    nodeId?: string,
-  ) => Promise<void>;
-  requestImport: (
-    nodeType: 'source.csv' | 'source.json',
-    opts?: { nodeId?: string; position?: { x: number; y: number } },
-  ) => void;
-}
-
-const FileImportContext = createContext<FileImportContextValue | null>(null);
 
 export function FileImportProvider({ children }: { children: ReactNode }) {
   const csvInputRef = useRef<HTMLInputElement>(null);
@@ -183,12 +163,4 @@ export function FileImportProvider({ children }: { children: ReactNode }) {
       />
     </FileImportContext.Provider>
   );
-}
-
-export function useFileImport(): FileImportContextValue {
-  const ctx = useContext(FileImportContext);
-  if (!ctx) {
-    throw new Error('useFileImport must be used within FileImportProvider');
-  }
-  return ctx;
 }

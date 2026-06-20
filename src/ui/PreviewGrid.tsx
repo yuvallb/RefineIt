@@ -8,7 +8,6 @@ import DataEditor, {
 import '@glideapps/glide-data-grid/dist/index.css';
 
 import { PREVIEW_ROW_CAP } from '@/lib/constants';
-import type { PreviewPayload } from '@/lib/types';
 import { useRuntimeStore } from '@/state/runtime-store';
 import { useUiStore } from '@/state/ui-store';
 import { useWorkflowStore } from '@/state/workflow-store';
@@ -150,13 +149,6 @@ export function PreviewGrid() {
         />
       </div>
     </div>
-  );
-}
-
-export function useSelectedPreview(): PreviewPayload | null {
-  const selectedNodeId = useWorkflowStore((s) => s.selectedNodeId);
-  return useRuntimeStore((s) =>
-    selectedNodeId ? (s.byNodeId.get(selectedNodeId)?.preview ?? null) : null,
   );
 }
 

@@ -4,7 +4,7 @@ import { usePyodide } from '@/hooks/usePyodide';
 import { SITE } from '@/lib/site-config';
 import { AboutLink } from '@/ui/AboutDialog';
 import { HelpButton } from '@/ui/HelpDialog';
-import { useSelectedPreview } from '@/ui/PreviewGrid';
+import { useSelectedPreview } from '@/hooks/useSelectedPreview';
 import { useRuntimeStore } from '@/state/runtime-store';
 
 function statusLabel(status: string, progressStage: string): string {
