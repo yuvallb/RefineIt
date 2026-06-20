@@ -5,22 +5,43 @@ import { aiSummarize } from '@/nodes/ai-summarize';
 const upstream = [{ name: 'notes', dtype: 'string' as const, pandasDtype: 'object', nullable: true }];
 
 describe('aiSummarize', () => {
-  it('compile returns copy placeholder with AI comment', () => {
-    const code = aiSummarize.compile({ scope: 'dataset' }, ['node_a'], 'node_b', {});
+  it('compiles stats dataset panel mode', () => {
+    const code = aiSummarize.compile(
+      { method: 'stats', scope: 'dataset', output: 'panel' },
+      ['node_a'],
+      'node_b',
+      {},
+    );
     expect(code).toContain('node_b = node_a.copy()');
-    expect(code).toContain('AI execution on main thread');
+    expect(code).toContain('build_dataset_stats_summary');
+    expect(code).toContain('store_node_summary');
   });
 
-  it('validate fails when AI disabled', () => {
-    const errors = aiSummarize.validate({ scope: 'dataset' }, [upstream]);
-    if (import.meta.env.VITE_ENABLE_AI_NODES !== 'true') {
-      expect(errors.some((e) => e.message.includes('AI nodes are disabled'))).toBe(true);
-    }
+  it('compiles stats column dataframe mode', () => {
+    const code = aiSummarize.compile(
+      { method: 'stats', scope: 'column', column: 'notes', output: 'dataframe', topK: 5 },
+      ['node_a'],
+      'node_b',
+      {},
+    );
+    expect(code).toContain("build_column_text_summary(node_a, \"notes\"");
+    expect(code).toContain("pd.DataFrame({'summary':");
   });
 
-  it('requires column for column scope when AI enabled', () => {
-    if (import.meta.env.VITE_ENABLE_AI_NODES !== 'true') return;
-    const errors = aiSummarize.validate({ scope: 'column', column: '' }, [upstream]);
+  it('validate rejects llm method', () => {
+    const errors = aiSummarize.validate({ method: 'llm', scope: 'dataset' }, [upstream]);
+    expect(errors.some((e) => e.message.includes('Not implemented yet'))).toBe(true);
+  });
+
+  it('requires column for column scope', () => {
+    const errors = aiSummarize.validate(
+      { method: 'stats', scope: 'column', column: '' },
+      [upstream],
+    );
     expect(errors.some((e) => e.message.includes('Select a column'))).toBe(true);
+  });
+
+  it('is visible in palette without feature flag', () => {
+    expect(aiSummarize.hiddenInPalette).toBeFalsy();
   });
 });

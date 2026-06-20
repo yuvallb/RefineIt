@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 
 import { getUpstreamSchemasForNode, getValidateContext } from '@/engine/pipeline';
 import { getNodeDefinition } from '@/nodes/registry';
+import type { ClassifyRule } from '@/nodes/ai-classify';
 import { outputFormatFromNodeType, replaceFilenameExtension } from '@/nodes/output-utils';
 import type { InspectorField } from '@/nodes/types';
 import { diffWorkflowParams } from '@/versioning/diff';
@@ -423,6 +424,14 @@ function InspectorFieldRenderer({
             readOnly={readOnly}
           />
         );
+      case 'classify-rules':
+        return (
+          <ClassifyRulesEditor
+            rules={Array.isArray(config[field.key]) ? (config[field.key] as ClassifyRule[]) : []}
+            onChange={(rules) => onUpdate(field.key, rules)}
+            readOnly={readOnly}
+          />
+        );
       case 'param-ref':
         return (
           <Input value="" disabled placeholder="Parameters (M5)" className="text-xs opacity-50" />
@@ -444,6 +453,83 @@ function InspectorFieldRenderer({
         </span>
       ))}
     </label>
+  );
+}
+
+function ClassifyRulesEditor({
+  rules,
+  onChange,
+  readOnly = false,
+}: {
+  rules: ClassifyRule[];
+  onChange: (rules: ClassifyRule[]) => void;
+  readOnly?: boolean;
+}) {
+  const updateRule = (index: number, patch: Partial<ClassifyRule>) => {
+    const next = rules.map((rule, i) => (i === index ? { ...rule, ...patch } : rule));
+    onChange(next);
+  };
+
+  const addRule = () => {
+    onChange([...rules, { match: 'contains', pattern: '', label: '' }]);
+  };
+
+  const removeRule = (index: number) => {
+    onChange(rules.filter((_, i) => i !== index));
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      {rules.map((rule, i) => (
+        <div key={i} className="flex flex-col gap-1 rounded border border-border p-2">
+          <Select
+            value={rule.match}
+            disabled={readOnly}
+            onValueChange={(v) => updateRule(i, { match: v as ClassifyRule['match'] })}
+          >
+            <SelectTrigger className="text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="contains">contains</SelectItem>
+              <SelectItem value="regex">regex</SelectItem>
+            </SelectContent>
+          </Select>
+          <Input
+            value={rule.pattern}
+            readOnly={readOnly}
+            disabled={readOnly}
+            onChange={(e) => updateRule(i, { pattern: e.target.value })}
+            placeholder="Pattern"
+            className="text-xs"
+          />
+          <div className="flex gap-1">
+            <Input
+              value={rule.label}
+              readOnly={readOnly}
+              disabled={readOnly}
+              onChange={(e) => updateRule(i, { label: e.target.value })}
+              placeholder="Label"
+              className="flex-1 text-xs"
+            />
+            {!readOnly && (
+              <button
+                type="button"
+                onClick={() => removeRule(i)}
+                className="px-1 text-xs text-muted-foreground hover:text-foreground"
+              >
+                ×
+              </button>
+            )}
+          </div>
+        </div>
+      ))}
+      {!readOnly && (
+        <button type="button" onClick={addRule} className="text-xs text-primary hover:underline">
+          + Add rule
+        </button>
+      )}
+    </div>
   );
 }
 

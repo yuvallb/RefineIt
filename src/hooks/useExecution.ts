@@ -64,6 +64,7 @@ export function useExecution() {
             fingerprint: existing?.fingerprint ?? null,
             preview: existing?.preview ?? null,
             profile: existing?.profile ?? null,
+            summaryMarkdown: existing?.summaryMarkdown ?? null,
             error: failure.message,
             traceback: null,
           });
@@ -84,7 +85,7 @@ export function useExecution() {
           runtimeActions.setRunning(node.nodeId, true);
           const existing = cleared.get(node.nodeId);
           if (existing) {
-            cleared.set(node.nodeId, { ...existing, profile: null });
+            cleared.set(node.nodeId, { ...existing, profile: null, summaryMarkdown: null });
           }
         }
         runtimeActions.setNodeStates(Object.fromEntries(cleared.entries()));

@@ -1,3 +1,4 @@
+import hashlib
 import json
 import re
 
@@ -291,3 +292,106 @@ def validate_custom_python(code):
         return {"valid": False, "error": f"Disallowed syntax: {node_type.__name__}"}
 
     return {"valid": True}
+
+
+def anonymize_hash(value, salt):
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return value
+    text = str(value)
+    digest = hashlib.sha256((str(salt) + text).encode("utf-8")).hexdigest()
+    return digest[:12]
+
+
+def anonymize_mask(value, preserve_length=False):
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return value
+    text = str(value)
+    if not preserve_length:
+        return "*" * min(len(text), 8) if text else ""
+    return "".join("*" if ch.isalnum() else ch for ch in text)
+
+
+def store_node_summary(node_id, text):
+    summaries = globals().get("_refineit_summaries")
+    if summaries is None:
+        summaries = {}
+    summaries[str(node_id)] = str(text)
+    globals()["_refineit_summaries"] = summaries
+
+
+def build_dataset_stats_summary(df, top_k=10):
+    lines = [
+        f"Rows: {len(df):,}",
+        f"Columns: {len(df.columns):,}",
+    ]
+
+    null_pct = float(df.isna().sum().sum()) / max(len(df) * len(df.columns), 1)
+    lines.append(f"Null cells: {null_pct * 100:.1f}%")
+
+    numeric_cols = df.select_dtypes(include="number").columns.tolist()
+    if numeric_cols:
+        lines.append("")
+        lines.append("Numeric summary:")
+        desc = df[numeric_cols].describe().round(3)
+        lines.append(desc.to_string())
+
+    cat_cols = [
+        col
+        for col in df.columns
+        if col not in numeric_cols
+        and (pd.api.types.is_string_dtype(df[col]) or df[col].dtype == "object")
+    ]
+    for col in cat_cols[:5]:
+        lines.append("")
+        lines.append(f"Top values — {col}:")
+        counts = df[col].astype(str).value_counts().head(top_k)
+        for value, count in counts.items():
+            lines.append(f"  {value}: {count}")
+
+    return "\n".join(lines)
+
+
+def build_column_text_summary(df, column, top_k=10):
+    series = df[column]
+    non_null = series.dropna().astype(str)
+    lines = [
+        f"Column: {column}",
+        f"Rows: {len(df):,}",
+        f"Nulls: {int(series.isna().sum())} ({float(series.isna().mean()) * 100:.1f}%)",
+    ]
+
+    if len(non_null) > 0:
+        lengths = non_null.str.len()
+        lines.append(
+            f"Text length — min: {int(lengths.min())}, max: {int(lengths.max())}, mean: {lengths.mean():.1f}"
+        )
+        lines.append("")
+        lines.append("Top terms:")
+        terms = non_null.str.split().explode()
+        for term, count in terms.value_counts().head(top_k).items():
+            lines.append(f"  {term}: {count}")
+
+    return "\n".join(lines)
+
+
+def apply_classify_rules(series, rules, default_label=None):
+    result = pd.Series(default_label, index=series.index, dtype="object")
+    assigned = pd.Series(False, index=series.index)
+    text = series.astype(str)
+
+    for rule in rules:
+        match_type = rule.get("match", "contains")
+        pattern = rule.get("pattern", "")
+        label = rule.get("label", "")
+        if not pattern or not label:
+            continue
+
+        if match_type == "regex":
+            mask = text.str.contains(pattern, regex=True, na=False) & ~assigned
+        else:
+            mask = text.str.contains(pattern, regex=False, na=False) & ~assigned
+
+        result.loc[mask] = label
+        assigned = assigned | mask
+
+    return result

@@ -9,6 +9,7 @@ import { ALL_PALETTE_GROUPS, PALETTE_GROUP_LABELS } from '@/nodes/palette-groups
 import type { PaletteGroup } from '@/nodes/types';
 import type { NodeType } from '@/lib/types';
 import { useUiStore } from '@/state/ui-store';
+import { useWorkflowStore } from '@/state/workflow-store';
 import { Input } from '@/ui/components/ui/input';
 
 function matchesSearch(nodeType: NodeType, label: string, query: string): boolean {

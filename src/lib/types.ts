@@ -181,6 +181,8 @@ export interface NodeRuntimeState {
   fingerprint: string | null;
   preview: PreviewPayload | null;
   profile: ColumnProfile[] | null;
+  /** Markdown summary from ai.summarize panel mode. */
+  summaryMarkdown: string | null;
   error: string | null;
   traceback: string | null;
 }
@@ -195,6 +197,7 @@ export interface PipelineNodeRequest {
   nodeId: string;
   code: string;
   isStale: boolean;
+  loadPackages?: string[];
   csvBytes?: Uint8Array;
   csvOptions?: LoadCsvOptions;
   jsonBytes?: Uint8Array;

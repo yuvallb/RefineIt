@@ -1,3 +1,4 @@
+import { getOrCreateAnonymizeSalt } from '@/lib/anonymize-salt';
 import { getNodeDefinition } from '@/nodes/registry';
 import {
   hasParamRefs,
@@ -217,7 +218,14 @@ export async function buildPipelineRequest(
 ): Promise<BuildPipelineResult> {
   const { workflow, staleNodeIds, runtimeByNode, datasets, paramOverrides } = options;
   const sorted = topoSort(workflow.nodes, workflow.edges);
-  const paramRecord = getEffectiveParams(workflow.params, paramOverrides);
+  let paramRecord = getEffectiveParams(workflow.params, paramOverrides);
+
+  const usesHashAnonymize = workflow.nodes.some(
+    (n) => n.type === 'ai.anonymize' && n.config.method === 'hash',
+  );
+  if (usesHashAnonymize) {
+    paramRecord = { ...paramRecord, _anonymizeSalt: getOrCreateAnonymizeSalt() };
+  }
   const nodes: ExecutePipelineRequest['nodes'] = [];
   const validationFailures: BuildPipelineResult['validationFailures'] = [];
   const deferredStaleNodeIds: string[] = [];
@@ -325,6 +333,13 @@ export async function buildPipelineRequest(
 
     if (node.type === 'source.parquet' && dataset) {
       entry.parquetBytes = dataset.data;
+    }
+
+    if (node.type === 'ai.classify') {
+      const method = node.config.method;
+      if (method === 'supervised' || method === 'cluster') {
+        entry.loadPackages = ['scikit-learn'];
+      }
     }
 
     nodes.push(entry);

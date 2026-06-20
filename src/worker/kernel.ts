@@ -129,10 +129,25 @@ gc.collect()
         pyodide.FS.writeFile(`/tmp/${varName}.parquet`, node.parquetBytes);
       }
 
+      for (const pkg of node.loadPackages ?? []) {
+        await pyodide.loadPackage(pkg);
+      }
+
       pyodide.runPython(node.code);
       const previewRaw = pyodide.runPython(`preview_df(${varName})`);
       const preview = toPreviewPayload(convertPyodideValue(previewRaw));
       const profile = profileDataFrame(pyodide, varName);
+
+      let summaryMarkdown: string | null = null;
+      try {
+        const summaryRaw = pyodide.runPython(
+          `(globals().get('_refineit_summaries') or {}).get(${JSON.stringify(node.nodeId)})`,
+        );
+        const summaryValue = convertPyodideValue(summaryRaw);
+        summaryMarkdown = summaryValue != null ? String(summaryValue) : null;
+      } catch {
+        summaryMarkdown = null;
+      }
 
       nodeResults[node.nodeId] = {
         nodeId: node.nodeId,
@@ -140,6 +155,7 @@ gc.collect()
         fingerprint: null,
         preview,
         profile,
+        summaryMarkdown,
         error: null,
         traceback: null,
       };
@@ -151,6 +167,7 @@ gc.collect()
         fingerprint: null,
         preview: null,
         profile: null,
+        summaryMarkdown: null,
         error: parsed.message,
         traceback: parsed.traceback ?? null,
       };

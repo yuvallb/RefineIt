@@ -52,6 +52,7 @@ export type InspectorField =
   | { kind: 'aggregations'; key: string; label: string }
   | { kind: 'operations'; key: string; label: string }
   | { kind: 'patterns'; key: string; label: string }
+  | { kind: 'classify-rules'; key: string; label: string }
   | { kind: 'param-ref'; key: string; label: string };
 
 export type CompileMode = 'execution' | 'export';

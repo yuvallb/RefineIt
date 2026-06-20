@@ -215,7 +215,7 @@ joined_3 = csv_data_1.merge(json_data_2, left_on="country", right_on="country", 
 | `datetime` | Date / Time | Part extraction and date arithmetic |
 | `quality` | Data Quality | Validation, outliers, duplicate detection |
 | `window` | Window Operations | Analytic/window functions |
-| `ai` | AI | LLM-assisted transforms (client API) |
+| `ai` | Enrich | Labeling, summaries, PII handling (local worker + optional LLM) |
 | `python` | Python Code | User-controlled code escape hatch |
 
 ---
@@ -542,19 +542,21 @@ Split into **three nodes** (clearer inspectors than one mega-node).
 
 ---
 
-## Phase 11 — AI (`ai`)
+## Phase 11 — Enrich (`ai`)
 
-| Node | Type ID | Scope |
-|------|---------|-------|
-| Classify | `ai.classify` | Label rows/text via LLM |
-| Summarize | `ai.summarize` | Aggregate text or dataset summary |
-| Anonymize | `ai.anonymize` | PII redaction / pseudonymization |
+| Node | Type ID | Local methods (worker) | LLM methods (Track B) |
+|------|---------|------------------------|------------------------|
+| Classify | `ai.classify` | rules, cut, supervised†, cluster† | prompt + labels / `auto` |
+| Summarize | `ai.summarize` | stats (dataset or column) | narrative summary |
+| Anonymize | `ai.anonymize` | mask, hash, regex | `llm_rewrite` |
 
-> **Constraint:** Client-side only — user API key, direct browser calls to OpenAI-compatible or WebLLM endpoint. No RefineIt backend. Feature-flagged until privacy review.
+† supervised/cluster require lazy `scikit-learn` (optional Task A4).
 
-**Implementation tasks:** see dedicated checklist [`tasks/post-M4-ai-phase.md`](../tasks/post-M4-ai-phase.md) (settings, AI client, worker boundary, three nodes, codegen redaction, privacy gate).
+> **Constraint:** No RefineIt backend. **Track A** (local) runs entirely in the Pyodide worker — no API key, no feature flag. **Track B** (LLM) uses user API key + main-thread provider calls; feature-flagged until privacy review.
 
-**DoD:** See post-M4 AI task file — flag off by default; with key, classify 50 rows in manual QA.
+**Implementation tasks:** [`tasks/post-M4-ai-phase.md`](../tasks/post-M4-ai-phase.md) — Track A first (three nodes, local methods), then Track B (settings, AI client, worker injection, LLM methods, privacy gate).
+
+**DoD:** Track A — mask/hash, stats summarize, rules classify on demo data; exportable Python. Track B — flag off by default; with key, LLM classify 50 rows in manual QA.
 
 ---
 
@@ -633,8 +635,8 @@ Downstream column pickers use `preview.columns` from executed upstream nodes (`g
 |---------|--------|
 | pandas, numpy | existing |
 | pyarrow | 1 |
-| sklearn (optional) | 4 |
-| — | AI uses HTTP, not Pyodide |
+| sklearn (optional) | 4, 11 (classify supervised/cluster) |
+| — | Phase 11 Track B (LLM) uses HTTP on main thread, not Pyodide |
 
 ---
 
@@ -655,7 +657,7 @@ Phase 7   Text                        (post-M4 / M9)
 Phase 8   Date/time                   (post-M4 / M9)
 Phase 9   Data quality                (post-M4 / M9)
 Phase 10  Window (split nodes)        (post-M4 / M9)
-Phase 11  AI                          (post-M9, feature-flagged — [tasks/post-M4-ai-phase.md](../tasks/post-M4-ai-phase.md))
+Phase 11  Enrich (local + optional LLM)  (post-M9 — [tasks/post-M4-ai-phase.md](../tasks/post-M4-ai-phase.md); Track B feature-flagged)
 Phase 12  Custom Python               (post-M9, gated)
 ```
 
@@ -696,7 +698,7 @@ Phases 1–6 complete the "visual ETL" story. Phases 7–10 deepen analytics. Ph
 | `datetime` | 2 | dt.extract, dt.calc |
 | `quality` | 3 | validate, outliers, find.duplicates (no profile node) |
 | `window` | 3 | window.rolling, window.rank, window.shift |
-| `ai` | 3 | feature-flagged |
+| `ai` | 3 | local methods ship first; LLM methods feature-flagged |
 | `python` | 1 | feature-flagged |
 | **Total** | **40** | 14 implemented + 26 new (−1 `output`, +3 write splits, +1 parquet read, −1 profile, +2 window split) |
 

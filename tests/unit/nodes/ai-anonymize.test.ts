@@ -5,27 +5,53 @@ import { aiAnonymize } from '@/nodes/ai-anonymize';
 const upstream = [{ name: 'email', dtype: 'string' as const, pandasDtype: 'object', nullable: true }];
 
 describe('aiAnonymize', () => {
-  it('compile returns copy placeholder with AI comment', () => {
+  it('compiles mask with preserve length', () => {
     const code = aiAnonymize.compile(
-      { columns: ['email'], method: 'mask' },
+      { columns: ['email'], method: 'mask', preserveFormat: true },
       ['node_a'],
       'node_b',
       {},
     );
-    expect(code).toContain('node_b = node_a.copy()');
-    expect(code).toContain('AI execution on main thread');
+    expect(code).toContain('anonymize_mask');
+    expect(code).toContain('preserve_length=True');
   });
 
-  it('validate fails when AI disabled', () => {
-    const errors = aiAnonymize.validate({ columns: ['email'] }, [upstream]);
-    if (import.meta.env.VITE_ENABLE_AI_NODES !== 'true') {
-      expect(errors.some((e) => e.message.includes('AI nodes are disabled'))).toBe(true);
-    }
+  it('compiles hash with salt from params', () => {
+    const code = aiAnonymize.compile(
+      { columns: ['email'], method: 'hash' },
+      ['node_a'],
+      'node_b',
+      { _anonymizeSalt: 'test-salt' },
+    );
+    expect(code).toContain('anonymize_hash');
+    expect(code).toContain('"test-salt"');
   });
 
-  it('requires columns when AI enabled', () => {
-    if (import.meta.env.VITE_ENABLE_AI_NODES !== 'true') return;
-    const errors = aiAnonymize.validate({ columns: [] }, [upstream]);
+  it('compiles regex redaction', () => {
+    const code = aiAnonymize.compile(
+      { columns: ['email'], method: 'regex', regexPreset: 'email', replacement: '[REDACTED]' },
+      ['node_a'],
+      'node_b',
+      {},
+    );
+    expect(code).toContain('.str.replace(');
+    expect(code).toContain('[REDACTED]');
+  });
+
+  it('validate rejects llm_rewrite', () => {
+    const errors = aiAnonymize.validate(
+      { columns: ['email'], method: 'llm_rewrite' },
+      [upstream],
+    );
+    expect(errors.some((e) => e.message.includes('Not implemented yet'))).toBe(true);
+  });
+
+  it('requires columns for local methods', () => {
+    const errors = aiAnonymize.validate({ columns: [], method: 'mask' }, [upstream]);
     expect(errors.some((e) => e.message.includes('at least one'))).toBe(true);
+  });
+
+  it('is visible in palette without feature flag', () => {
+    expect(aiAnonymize.hiddenInPalette).toBeFalsy();
   });
 });

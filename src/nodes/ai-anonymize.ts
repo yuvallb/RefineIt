@@ -1,29 +1,61 @@
 import { parseStringArray, validateColumnsExist } from './column-utils';
+import { ANONYMIZE_REGEX_PRESETS, llmMethodError } from './ai-utils';
 import { nodeType, type PaletteNodeDefinition } from './node-type';
+import type { CompileContext } from './types';
 
-const AI_ENABLED = import.meta.env.VITE_ENABLE_AI_NODES === 'true';
+type AnonymizeMethod = 'mask' | 'hash' | 'regex' | 'llm_rewrite';
+type RegexPreset = 'email' | 'phone' | 'ssn' | 'credit_card' | 'custom';
 
-type AnonymizeMethod = 'mask' | 'hash' | 'llm_rewrite';
-
-function aiDisabledError() {
-  return [{ message: 'AI nodes are disabled — enable VITE_ENABLE_AI_NODES to use this node' }];
-}
-
-function compileAiPlaceholder(input: string, outputVar: string): string {
-  return `${outputVar} = ${input}.copy()  # AI execution on main thread; column injected at runtime`;
-}
+const MAX_REGEX_LENGTH = 500;
 
 function parseMethod(config: Record<string, unknown>): AnonymizeMethod {
-  if (config.method === 'hash' || config.method === 'llm_rewrite') return config.method;
+  const method = config.method;
+  if (method === 'hash' || method === 'regex' || method === 'llm_rewrite') return method;
   return 'mask';
+}
+
+function parsePreserveFormat(config: Record<string, unknown>): boolean {
+  return config.preserveFormat === true || config.preserveFormat === 'true';
+}
+
+function parseRegexPreset(config: Record<string, unknown>): RegexPreset {
+  const preset = config.regexPreset;
+  if (preset === 'phone' || preset === 'ssn' || preset === 'credit_card' || preset === 'custom') {
+    return preset;
+  }
+  return 'email';
+}
+
+function resolveRegexPattern(config: Record<string, unknown>): string {
+  const preset = parseRegexPreset(config);
+  if (preset === 'custom') {
+    return typeof config.pattern === 'string' ? config.pattern.trim() : '';
+  }
+  return ANONYMIZE_REGEX_PRESETS[preset] ?? ANONYMIZE_REGEX_PRESETS.email;
+}
+
+function isRegexSafe(regex: string): boolean {
+  if (regex.length > MAX_REGEX_LENGTH) return false;
+  if (/\([^)]*[+*][^)]*\)[+*]/.test(regex)) return false;
+  return true;
+}
+
+function resolveSalt(
+  params: Record<string, unknown>,
+  context?: CompileContext,
+): string {
+  if (context?.mode === 'export') {
+    return 'YOUR_SESSION_SALT';
+  }
+  const salt = params._anonymizeSalt;
+  return typeof salt === 'string' && salt.length > 0 ? salt : 'session-salt';
 }
 
 export const aiAnonymize: PaletteNodeDefinition = {
   type: nodeType('ai.anonymize'),
-  label: 'AI Anonymize',
+  label: 'Anonymize',
   category: 'transform',
   paletteGroup: 'ai',
-  hiddenInPalette: !AI_ENABLED,
   inputs: [{ id: 'input', label: 'Input' }],
   outputs: 1,
 
@@ -32,11 +64,17 @@ export const aiAnonymize: PaletteNodeDefinition = {
       columns: [] as string[],
       method: 'mask' as AnonymizeMethod,
       preserveFormat: false,
+      regexPreset: 'email' as RegexPreset,
+      pattern: '',
+      replacement: '[REDACTED]',
     };
   },
 
   validate(config, inputSchemas) {
-    if (!AI_ENABLED) return aiDisabledError();
+    const method = parseMethod(config);
+    if (method === 'llm_rewrite') {
+      return llmMethodError();
+    }
 
     const errors = [];
     const columns = parseStringArray(config.columns);
@@ -47,21 +85,70 @@ export const aiAnonymize: PaletteNodeDefinition = {
     }
 
     errors.push(...validateColumnsExist(columns, upstream, 'columns'));
+
+    if (method === 'regex') {
+      const pattern = resolveRegexPattern(config);
+      if (!pattern) {
+        errors.push({ field: 'pattern', message: 'Regex pattern is required' });
+      } else if (!isRegexSafe(pattern)) {
+        errors.push({ field: 'pattern', message: 'Unsafe or overly long regex pattern' });
+      }
+    }
+
     return errors;
   },
 
-  compile(config, inputVars, outputVar, _params?, _context?) {
-    void _params;
-    void _context;
-    void config;
-    return compileAiPlaceholder(inputVars[0], outputVar);
+  compile(config, inputVars, outputVar, params, context) {
+    const method = parseMethod(config);
+    const columns = parseStringArray(config.columns);
+    const input = inputVars[0];
+    const preserveFormat = parsePreserveFormat(config);
+    const lines = [`${outputVar} = ${input}.copy()`];
+
+    for (const column of columns) {
+      const col = JSON.stringify(column);
+      const series = `${outputVar}[${col}]`;
+
+      if (method === 'mask') {
+        lines.push(
+          `${series} = ${series}.map(lambda v: anonymize_mask(v, preserve_length=${preserveFormat ? 'True' : 'False'}))`,
+        );
+      } else if (method === 'hash') {
+        const salt = JSON.stringify(resolveSalt(params, context));
+        lines.push(`${series} = ${series}.map(lambda v: anonymize_hash(v, ${salt}))`);
+      } else if (method === 'regex') {
+        const pattern = resolveRegexPattern(config);
+        const replacement =
+          typeof config.replacement === 'string' && config.replacement.length > 0
+            ? config.replacement
+            : '[REDACTED]';
+        lines.push(
+          `${series} = ${series}.astype(str).str.replace(${JSON.stringify(pattern)}, ${JSON.stringify(replacement)}, regex=True)`,
+        );
+      }
+    }
+
+    return lines.join('\n');
   },
 
   inspectorSchema() {
     return [
       { kind: 'columns', key: 'columns', label: 'Columns' },
-      { kind: 'select', key: 'method', label: 'Method', options: ['mask', 'hash', 'llm_rewrite'] },
-      { kind: 'select', key: 'preserveFormat', label: 'Preserve format', options: ['true', 'false'] },
+      {
+        kind: 'select',
+        key: 'method',
+        label: 'Method',
+        options: ['mask', 'hash', 'regex', 'llm_rewrite'],
+      },
+      { kind: 'select', key: 'preserveFormat', label: 'Preserve format (mask)', options: ['false', 'true'] },
+      {
+        kind: 'select',
+        key: 'regexPreset',
+        label: 'Regex preset',
+        options: ['email', 'phone', 'ssn', 'credit_card', 'custom'],
+      },
+      { kind: 'text', key: 'pattern', label: 'Custom regex (when preset = custom)' },
+      { kind: 'text', key: 'replacement', label: 'Regex replacement' },
     ];
   },
 
