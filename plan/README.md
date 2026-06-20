@@ -40,6 +40,7 @@ This folder contains the architecture and implementation plan for building **Ref
 | [09-risks-and-mitigations.md](./09-risks-and-mitigations.md) | Technical risks |
 | [10-testing.md](./10-testing.md) | Test strategy |
 | [11-branding-and-product-surface.md](./11-branding-and-product-surface.md) | Logo, tagline, About dialog, GitHub links, SEO |
+| [12-node-expansion.md](./12-node-expansion.md) | Grouped palette + expanded node types (phases 0–12) |
 
 ## One-sentence summary
 
