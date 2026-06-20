@@ -125,10 +125,29 @@ gc.collect()
         pyodide.FS.writeFile(`/tmp/${varName}.json`, node.jsonBytes);
       }
 
+      if (node.parquetBytes) {
+        pyodide.FS.writeFile(`/tmp/${varName}.parquet`, node.parquetBytes);
+      }
+
+      for (const pkg of node.loadPackages ?? []) {
+        await pyodide.loadPackage(pkg);
+      }
+
       pyodide.runPython(node.code);
       const previewRaw = pyodide.runPython(`preview_df(${varName})`);
       const preview = toPreviewPayload(convertPyodideValue(previewRaw));
       const profile = profileDataFrame(pyodide, varName);
+
+      let summaryMarkdown: string | null = null;
+      try {
+        const summaryRaw = pyodide.runPython(
+          `(globals().get('_refineit_summaries') or {}).get(${JSON.stringify(node.nodeId)})`,
+        );
+        const summaryValue = convertPyodideValue(summaryRaw);
+        summaryMarkdown = summaryValue != null ? String(summaryValue) : null;
+      } catch {
+        summaryMarkdown = null;
+      }
 
       nodeResults[node.nodeId] = {
         nodeId: node.nodeId,
@@ -136,6 +155,7 @@ gc.collect()
         fingerprint: null,
         preview,
         profile,
+        summaryMarkdown,
         error: null,
         traceback: null,
       };
@@ -147,6 +167,7 @@ gc.collect()
         fingerprint: null,
         preview: null,
         profile: null,
+        summaryMarkdown: null,
         error: parsed.message,
         traceback: parsed.traceback ?? null,
       };
@@ -160,12 +181,18 @@ gc.collect()
 export function exportNodeOutput(
   pyodide: PyodideInterface,
   nodeId: string,
-  format: 'csv' | 'json',
-): string {
+  format: 'csv' | 'json' | 'parquet',
+): string | Uint8Array {
   const varName = `node_${nodeId}`;
   const exists = pyodide.runPython(`"${varName}" in globals()`);
   if (!exists) {
     throw new Error(`Node output not found: ${nodeId}`);
+  }
+
+  if (format === 'parquet') {
+    const path = `/tmp/export_${nodeId}.parquet`;
+    pyodide.runPython(`${varName}.to_parquet(${JSON.stringify(path)}, index=False)`);
+    return pyodide.FS.readFile(path);
   }
 
   const helper = format === 'json' ? 'export_df_json' : 'export_df_csv';

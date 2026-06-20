@@ -22,6 +22,7 @@ const defaultRuntime = (): NodeRuntimeState => ({
   fingerprint: null,
   preview: null,
   profile: null,
+  summaryMarkdown: null,
   error: null,
   traceback: null,
 });

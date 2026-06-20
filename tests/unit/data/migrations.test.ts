@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
 import { migrateWorkflow } from '@/data/migrations';
+import { IncompatibleWorkflowError } from '@/data/workflow-repo';
 import { WORKFLOW_SCHEMA_VERSION } from '@/lib/constants';
 import type { Workflow } from '@/lib/types';
 
 const sampleWorkflow = (): Workflow => ({
   id: 'wf-1',
   name: 'Test Pipeline',
-  schemaVersion: 1,
+  schemaVersion: WORKFLOW_SCHEMA_VERSION,
   nodes: [
     {
       id: 'n1',
@@ -37,16 +38,15 @@ describe('migrateWorkflow', () => {
     expect(migrated.schemaVersion).toBe(WORKFLOW_SCHEMA_VERSION);
   });
 
-  it('preserves all workflow fields on round-trip', () => {
-    const workflow = sampleWorkflow();
-    const migrated = migrateWorkflow(structuredClone(workflow));
+  it('rejects workflows below current schema version', () => {
+    const workflow = { ...sampleWorkflow(), schemaVersion: 1 };
 
-    expect(migrated.id).toBe(workflow.id);
-    expect(migrated.name).toBe(workflow.name);
-    expect(migrated.nodes).toEqual(workflow.nodes);
-    expect(migrated.edges).toEqual(workflow.edges);
-    expect(migrated.params).toEqual(workflow.params);
-    expect(migrated.createdAt).toBe(workflow.createdAt);
-    expect(migrated.updatedAt).toBe(workflow.updatedAt);
+    expect(() => migrateWorkflow(workflow)).toThrow(IncompatibleWorkflowError);
+  });
+
+  it('rejects workflows above current schema version', () => {
+    const workflow = { ...sampleWorkflow(), schemaVersion: WORKFLOW_SCHEMA_VERSION + 1 };
+
+    expect(() => migrateWorkflow(workflow)).toThrow(IncompatibleWorkflowError);
   });
 });

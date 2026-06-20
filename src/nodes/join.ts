@@ -22,6 +22,9 @@ export const join: NodeDefinition = {
   type: 'join',
   label: 'Join',
   category: 'transform',
+  paletteGroup: 'combine',
+  paletteOrder: 0,
+  exportVarSlug: 'joined',
   inputs: [
     { id: 'left', label: 'Left' },
     { id: 'right', label: 'Right' },
@@ -63,7 +66,9 @@ export const join: NodeDefinition = {
     return errors;
   },
 
-  compile(config, inputVars, outputVar) {
+  compile(config, inputVars, outputVar, _params?, _context?) {
+    void _params;
+    void _context;
     const left = inputVars[0];
     const right = inputVars[1];
     const leftOn = typeof config.leftOn === 'string' ? config.leftOn.trim() : '';

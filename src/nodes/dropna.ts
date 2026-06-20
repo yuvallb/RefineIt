@@ -11,6 +11,9 @@ export const dropna: NodeDefinition = {
   type: 'dropna',
   label: 'Drop NA',
   category: 'transform',
+  paletteGroup: 'missing',
+  paletteOrder: 0,
+  exportVarSlug: 'dropna',
   inputs: [{ id: 'input', label: 'Input' }],
   outputs: 1,
 
@@ -24,7 +27,9 @@ export const dropna: NodeDefinition = {
     return validateColumnsExist(columns, upstream, 'columns');
   },
 
-  compile(config, inputVars, outputVar) {
+  compile(config, inputVars, outputVar, _params?, _context?) {
+    void _params;
+    void _context;
     const columns = parseStringArray(config.columns);
     const input = inputVars[0];
     const how = parseHow(config);

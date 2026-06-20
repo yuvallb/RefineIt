@@ -17,6 +17,9 @@ export const cast: NodeDefinition = {
   type: 'cast',
   label: 'Cast',
   category: 'transform',
+  paletteGroup: 'column',
+  paletteOrder: 3,
+  exportVarSlug: 'casted',
   inputs: [{ id: 'input', label: 'Input' }],
   outputs: 1,
 
@@ -51,7 +54,9 @@ export const cast: NodeDefinition = {
     return errors;
   },
 
-  compile(config, inputVars, outputVar) {
+  compile(config, inputVars, outputVar, _params?, _context?) {
+    void _params;
+    void _context;
     const mapping = parseStringRecord(config.mapping);
     const input = inputVars[0];
     const entries = Object.entries(mapping)

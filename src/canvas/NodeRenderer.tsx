@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { downloadNodeOutput } from '@/export/data-download';
 import { useFileImport } from '@/hooks/useFileImport';
 import { getNodeDefinition } from '@/nodes/registry';
+import { outputFormatFromNodeType } from '@/nodes/output-utils';
 import type { WorkflowNode } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { getNodeDiffStatus } from '@/versioning/diff';
@@ -84,7 +85,7 @@ export const NodeRenderer = memo(function NodeRenderer({ data, selected }: NodeP
   const [isDownloading, setIsDownloading] = useState(false);
   const canDownload = Boolean(preview) && !isDownloading && status !== 'running';
 
-  const outputFormat = workflowNode.config.format === 'json' ? 'json' : 'csv';
+  const outputFormat = outputFormatFromNodeType(workflowNode.type) ?? 'csv';
   const outputFilename =
     typeof workflowNode.config.filename === 'string'
       ? workflowNode.config.filename
@@ -97,7 +98,11 @@ export const NodeRenderer = memo(function NodeRenderer({ data, selected }: NodeP
 
       setIsDownloading(true);
       try {
-        const result = await downloadNodeOutput(workflowNode.id, outputFormat, outputFilename);
+        const result = await downloadNodeOutput(
+          workflowNode.id,
+          outputFormat,
+          outputFilename,
+        );
         if (result.ok) {
           toast.success(`Downloaded ${outputFilename}`);
         } else {

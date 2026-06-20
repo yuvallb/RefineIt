@@ -1,13 +1,8 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useRef,
-  type ReactNode,
-} from 'react';
+import { useCallback, useMemo, useRef, type ReactNode } from 'react';
 import { toast } from 'sonner';
 
+import { getNextNodePlacementPosition } from '@/canvas/node-placement';
+import { FileImportContext } from '@/hooks/file-import-context';
 import { detectDelimiter } from '@/lib/delimiter';
 import { LARGE_FILE_WARN_BYTES } from '@/lib/constants';
 import type { NodeType } from '@/lib/types';
@@ -29,24 +24,12 @@ interface ImportContext {
   position: { x: number; y: number };
 }
 
-interface FileImportContextValue {
-  ingestFile: (
-    file: File,
-    position: { x: number; y: number },
-    nodeId?: string,
-  ) => Promise<void>;
-  requestImport: (
-    nodeType: 'source.csv' | 'source.json',
-    opts?: { nodeId?: string; position?: { x: number; y: number } },
-  ) => void;
-}
-
-const FileImportContext = createContext<FileImportContextValue | null>(null);
-
 export function FileImportProvider({ children }: { children: ReactNode }) {
   const csvInputRef = useRef<HTMLInputElement>(null);
   const jsonInputRef = useRef<HTMLInputElement>(null);
-  const importContextRef = useRef<ImportContext>({ position: { x: 120, y: 120 } });
+  const importContextRef = useRef<ImportContext>({
+    position: getNextNodePlacementPosition(useWorkflowStore.getState().workflow.nodes),
+  });
 
   const addNode = useWorkflowStore((s) => s.addNode);
   const setDataset = useWorkflowStore((s) => s.setDataset);
@@ -134,7 +117,9 @@ export function FileImportProvider({ children }: { children: ReactNode }) {
     ) => {
       importContextRef.current = {
         nodeId: opts?.nodeId,
-        position: opts?.position ?? { x: 120, y: 120 },
+        position:
+          opts?.position ??
+          getNextNodePlacementPosition(useWorkflowStore.getState().workflow.nodes),
       };
       if (nodeType === 'source.json') {
         jsonInputRef.current?.click();
@@ -183,12 +168,4 @@ export function FileImportProvider({ children }: { children: ReactNode }) {
       />
     </FileImportContext.Provider>
   );
-}
-
-export function useFileImport(): FileImportContextValue {
-  const ctx = useContext(FileImportContext);
-  if (!ctx) {
-    throw new Error('useFileImport must be used within FileImportProvider');
-  }
-  return ctx;
 }

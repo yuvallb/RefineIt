@@ -183,14 +183,21 @@ Extend M1 crash recovery in `usePyodide.ts`:
 
 ---
 
-## Task 11: Schema migrations
+## Task 11: Schema compatibility (no migrations)
 
 ### Implementation
 
-- `CURRENT_SCHEMA_VERSION = 1` in constants
-- On load: if `workflow.schemaVersion < CURRENT`, run migration chain
-- `src/data/migrations/v1-to-v2.ts` stub (no-op until needed)
-- Unit test migration round-trip when v2 added
+- `WORKFLOW_SCHEMA_VERSION` in constants — bump on breaking workflow/node changes.
+- **No migration chain** — see [`plan/12-node-expansion.md`](../plan/12-node-expansion.md) § Persistence & compatibility policy.
+- On boot: `validateAllStoredWorkflows()` scans **every** workflow in IndexedDB.
+- Incompatible data → `IncompatibleDataDialog` + `clearAllLocalData()`.
+- Share import: reject `schemaVersion < CURRENT` and unknown node types (update `deserializeWorkflow` if needed).
+- Remove or leave `src/data/migrations/` as no-op; do not add v1→v2 migrations for node expansion.
+
+### Tests
+
+- [ ] Unit: all workflows invalid → dialog; clear → empty store.
+- [ ] Unit: share JSON with unknown node type → structured error.
 
 ---
 

@@ -11,6 +11,10 @@ export const select: NodeDefinition = {
   type: 'select',
   label: 'Select',
   category: 'transform',
+  paletteGroup: 'column',
+  paletteOrder: 0,
+  hiddenInPalette: false,
+  exportVarSlug: 'selected',
   inputs: [{ id: 'input', label: 'Input' }],
   outputs: 1,
 
@@ -31,7 +35,9 @@ export const select: NodeDefinition = {
     return errors;
   },
 
-  compile(config, inputVars, outputVar) {
+  compile(config, inputVars, outputVar, _params?, _context?) {
+    void _params;
+    void _context;
     const columns = parseStringArray(config.columns);
     const input = inputVars[0];
     const colList = columns.map((c) => JSON.stringify(c)).join(', ');

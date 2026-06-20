@@ -110,6 +110,20 @@ describe('execution kernel', () => {
 
 ## E2E tests (Playwright)
 
+E2E is **slow** (Pyodide boot, full UI flows). CI runs **lint, typecheck, unit, and build only** — E2E is **on-demand** locally or via a manual/heavy workflow.
+
+### CI vs on-demand
+
+| Suite | Command | CI (default) | When to run |
+|-------|---------|--------------|-------------|
+| Unit | `npm run test:unit` | Yes | Every PR |
+| Integration (browser) | `npm run test:integration` | No (optional later) | Before kernel/persistence changes |
+| E2E smoke | `npm run test:e2e -- tests/e2e/pyodide-smoke.spec.ts` | No | Quick local sanity |
+| E2E core | `npm run test:e2e -- tests/e2e/vertical-slice.spec.ts tests/e2e/sharing.spec.ts` | No | Milestone DoD, pre-release |
+| E2E full / heavy | `npm run test:e2e` | No | Pre-release, post-M4 palette expansion |
+
+Add `npm run test:e2e:heavy` (alias for full suite) in implementation when the heavy suite grows.
+
 ### vertical-slice.spec.ts
 
 The most important E2E test. Covers the full M2 pipeline.
@@ -149,21 +163,41 @@ The most important E2E test. Covers the full M2 pipeline.
 4. Verify worker is responsive (run test DataFrame)
 ```
 
+### Heavy E2E suite (post-M4, on-demand)
+
+Expand coverage as node palette grows — **not** gated on CI time.
+
+| Spec (planned) | Flow |
+|----------------|------|
+| `palette-groups.spec.ts` | Collapsible groups, search, add node from each populated group |
+| `row-ops.spec.ts` | CSV → Filter → Sample → Limit → Write CSV |
+| `io-parquet.spec.ts` | Parquet read/write (if pyarrow gate passed) |
+| `combine-merge.spec.ts` | Two-branch join + merge.update |
+| `text-cleaning.spec.ts` | Trim → lower → extract domain |
+| `datetime.spec.ts` | Parse → extract parts → date diff |
+| `quality.spec.ts` | Validate emails, flag outliers, find duplicates |
+| `window.spec.ts` | Rolling average + rank within group |
+| `versioning.spec.ts` | Save version → edit → revert (M6) |
+
+Run full heavy suite: `npm run test:e2e` before releases and after large post-M4 phases.
+
 ## CI pipeline
 
 ```yaml
 # .github/workflows/deploy.yml
 jobs:
-  test:
+  quality:
     steps:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test:unit        # fast, no Pyodide
-      - run: npm run test:integration # slower, loads Pyodide
-      - run: npm run test:e2e         # Playwright, headless
+      - run: npm run build
+      # E2E and integration: on-demand only (see table above)
+      # - run: npm run test:integration
+      # - run: npm run test:e2e
 
   deploy:
-    needs: test
+    needs: quality
     steps:
       - run: npm run build
       - deploy to GitHub Pages

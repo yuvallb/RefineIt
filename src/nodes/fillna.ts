@@ -11,6 +11,9 @@ export const fillna: NodeDefinition = {
   type: 'fillna',
   label: 'Fill NA',
   category: 'transform',
+  paletteGroup: 'missing',
+  paletteOrder: 1,
+  exportVarSlug: 'filled',
   inputs: [{ id: 'input', label: 'Input' }],
   outputs: 1,
 
@@ -24,7 +27,9 @@ export const fillna: NodeDefinition = {
     return validateColumnsExist(columns, upstream, 'columns');
   },
 
-  compile(config, inputVars, outputVar) {
+  compile(config, inputVars, outputVar, _params?, _context?) {
+    void _params;
+    void _context;
     const columns = parseStringArray(config.columns);
     const input = inputVars[0];
     const value = parseValue(config);

@@ -12,7 +12,7 @@ import type { Workflow } from '@/lib/types';
 const workflow: Workflow = {
   id: 'wf1',
   name: 'Test',
-  schemaVersion: 1,
+  schemaVersion: 2,
   createdAt: '2026-01-01T00:00:00Z',
   updatedAt: '2026-01-01T00:00:00Z',
   params: [],
@@ -58,6 +58,7 @@ function runtimeState(nodeId: string, fingerprint: string) {
     fingerprint,
     preview: null,
     profile: null,
+    summaryMarkdown: null,
     error: null,
     traceback: null,
   };
@@ -73,6 +74,7 @@ describe('buildPipelineRequest', () => {
     });
 
     expect(request.nodes).toHaveLength(0);
+    expect(request.deferredStaleNodeIds).toEqual(['src', 'flt', 'grp']);
   });
 
   it('skips nodes that fail validation', async () => {
@@ -93,6 +95,49 @@ describe('buildPipelineRequest', () => {
     expect(request.nodes.map((n) => n.nodeId)).toEqual(['src']);
     expect(request.validationFailures).toHaveLength(1);
     expect(request.validationFailures[0]?.nodeId).toBe('flt');
+  });
+
+  it('defers stale orphaned nodes missing required inputs', async () => {
+    const withOrphan: Workflow = {
+      ...workflow,
+      nodes: [
+        ...workflow.nodes,
+        {
+          id: 'orphan',
+          type: 'filter',
+          position: { x: 200, y: 0 },
+          config: { expression: 'revenue > 0' },
+        },
+      ],
+    };
+
+    const request = await buildPipelineRequest({
+      workflow: withOrphan,
+      staleNodeIds: new Set(['src', 'flt', 'grp', 'orphan']),
+      runtimeByNode: new Map(),
+      datasets: { src: dataset },
+    });
+
+    expect(request.nodes.map((n) => n.nodeId)).toEqual(['src', 'flt', 'grp']);
+    expect(request.deferredStaleNodeIds).toEqual(['orphan']);
+  });
+
+  it('defers stale downstream blocked by an unrunnable upstream', async () => {
+    const disconnectedChain: Workflow = {
+      ...workflow,
+      nodes: workflow.nodes.filter((n) => n.type !== 'source.csv'),
+      edges: [{ id: 'e2', source: 'flt', target: 'grp' }],
+    };
+
+    const request = await buildPipelineRequest({
+      workflow: disconnectedChain,
+      staleNodeIds: new Set(['flt', 'grp']),
+      runtimeByNode: new Map(),
+      datasets: {},
+    });
+
+    expect(request.nodes).toHaveLength(0);
+    expect(request.deferredStaleNodeIds).toEqual(['flt', 'grp']);
   });
 
   it('skips unchanged source on incremental recompute', async () => {

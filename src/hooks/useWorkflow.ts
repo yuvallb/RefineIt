@@ -7,7 +7,11 @@ import {
   loadDatasetsForWorkflow,
   saveDataset,
 } from '@/data/dataset-repo';
-import { saveWorkflow, getMostRecentWorkflow } from '@/data/workflow-repo';
+import {
+  saveWorkflow,
+  getMostRecentWorkflow,
+  validateAllStoredWorkflows,
+} from '@/data/workflow-repo';
 import { decodeWorkflowFromHash, parseHashOnLoad, clearWorkflowHash } from '@/sharing/url';
 import { createSnapshot } from '@/versioning/snapshot';
 import { AUTO_SNAPSHOT_EDIT_COUNT, AUTOSAVE_DEBOUNCE_MS } from '@/lib/constants';
@@ -30,6 +34,7 @@ export function useWorkflow() {
 
   const setSaveStatus = useUiStore((s) => s.setSaveStatus);
   const setSharedImport = useUiStore((s) => s.setSharedImport);
+  const setIncompatibleDataDialogOpen = useUiStore((s) => s.setIncompatibleDataDialogOpen);
 
   datasetsRef.current = datasets;
 
@@ -98,6 +103,8 @@ export function useWorkflow() {
         }
 
         setSharedImport(false);
+        await validateAllStoredWorkflows();
+
         const stored = await getMostRecentWorkflow();
         if (cancelled) return;
 
@@ -109,8 +116,12 @@ export function useWorkflow() {
           await saveWorkflow(current);
         }
       } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        toast.error(`Failed to restore workflow: ${message}`);
+        if (err instanceof Error && err.name === 'IncompatibleWorkflowError') {
+          setIncompatibleDataDialogOpen(true);
+        } else {
+          const message = err instanceof Error ? err.message : String(err);
+          toast.error(`Failed to restore workflow: ${message}`);
+        }
       } finally {
         if (!cancelled) {
           setHydrated(true);
@@ -124,7 +135,7 @@ export function useWorkflow() {
     return () => {
       cancelled = true;
     };
-  }, [loadWorkflowState, setHydrated, markAllStale, setSharedImport]);
+  }, [loadWorkflowState, setHydrated, markAllStale, setSharedImport, setIncompatibleDataDialogOpen]);
 
   useEffect(() => {
     if (!isHydrated) return;

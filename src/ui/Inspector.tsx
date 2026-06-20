@@ -3,7 +3,9 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 
 import { getUpstreamSchemasForNode, getValidateContext } from '@/engine/pipeline';
 import { getNodeDefinition } from '@/nodes/registry';
-import { replaceFilenameExtension, type OutputFormat } from '@/nodes/output';
+import type { ClassifyRule } from '@/nodes/ai-classify';
+import { PRESET_REGEX } from '@/nodes/str-extract';
+import { outputFormatFromNodeType, replaceFilenameExtension } from '@/nodes/output-utils';
 import type { InspectorField } from '@/nodes/types';
 import { diffWorkflowParams } from '@/versioning/diff';
 import { useRuntimeStore } from '@/state/runtime-store';
@@ -12,6 +14,7 @@ import { useWorkflowStore } from '@/state/workflow-store';
 import { useFileImport } from '@/hooks/useFileImport';
 import { ColumnPicker } from '@/ui/ColumnPicker';
 import { ExpressionInput } from '@/ui/ExpressionInput';
+import { CodeInput } from '@/ui/CodeInput';
 import { NodeErrorPanel } from '@/ui/NodeErrorPanel';
 import { Button } from '@/ui/components/ui/button';
 import { Input } from '@/ui/components/ui/input';
@@ -24,6 +27,45 @@ import {
 } from '@/ui/components/ui/select';
 
 const DTYPE_OPTIONS = ['int64', 'float64', 'str', 'bool', 'datetime64[ns]', 'category'];
+
+interface ExtractPattern {
+  name: string;
+  regex: string;
+  group?: number;
+}
+
+const PRESET_LABELS: Record<keyof typeof PRESET_REGEX, string> = {
+  email: 'Email',
+  'zip-us': 'US Zip',
+  domain: 'Domain from URL',
+  phone: 'Phone',
+};
+
+type StrOp =
+  | 'strip'
+  | 'lower'
+  | 'upper'
+  | 'title'
+  | 'replace'
+  | 'removeprefix'
+  | 'removesuffix'
+  | 'zfill';
+
+interface StrOperation {
+  op: StrOp;
+  args?: Record<string, unknown>;
+}
+
+const STR_OP_LABELS: Record<StrOp, string> = {
+  strip: 'Strip whitespace',
+  lower: 'Lowercase',
+  upper: 'Uppercase',
+  title: 'Title case',
+  replace: 'Replace text',
+  removeprefix: 'Remove prefix',
+  removesuffix: 'Remove suffix',
+  zfill: 'Zero-fill',
+};
 
 export function Inspector() {
   const workflow = useWorkflowStore((s) => s.workflow);
@@ -109,13 +151,12 @@ export function Inspector() {
 
   const update = (key: string, value: unknown) => {
     if (isReadOnly) return;
-    if (displayNode.type === 'output' && key === 'format') {
-      const format: OutputFormat = value === 'json' ? 'json' : 'csv';
+    const outputFormat = outputFormatFromNodeType(displayNode.type);
+    if (outputFormat && key === 'filename') {
       const currentFilename =
-        typeof config.filename === 'string' ? config.filename : 'pipeline_output.csv';
+        typeof config.filename === 'string' ? config.filename : `pipeline_output.${outputFormat}`;
       updateNodeConfig(displayNode.id, {
-        format,
-        filename: replaceFilenameExtension(currentFilename, format),
+        filename: replaceFilenameExtension(currentFilename, outputFormat),
       });
       return;
     }
@@ -356,12 +397,31 @@ function InspectorFieldRenderer({
             disabled={readOnly}
           />
         );
+      case 'string-list':
+        return (
+          <StringListEditor
+            values={Array.isArray(config[field.key]) ? (config[field.key] as string[]) : []}
+            onChange={(v) => onUpdate(field.key, v)}
+            placeholder="Column name"
+            readOnly={readOnly}
+          />
+        );
       case 'expression':
         return (
           <ExpressionInput
             value={String(config[field.key] ?? '')}
             onChange={(v) => onUpdate(field.key, v)}
             workflowParamNames={workflowParamNames}
+            readOnly={readOnly}
+          />
+        );
+      case 'code':
+        return (
+          <CodeInput
+            value={String(config[field.key] ?? '')}
+            onChange={(v) => onUpdate(field.key, v)}
+            placeholder={'placeholder' in field ? field.placeholder : undefined}
+            minHeight={'minHeight' in field ? field.minHeight : undefined}
             readOnly={readOnly}
           />
         );
@@ -404,6 +464,34 @@ function InspectorFieldRenderer({
             readOnly={readOnly}
           />
         );
+      case 'classify-rules':
+        return (
+          <ClassifyRulesEditor
+            rules={Array.isArray(config[field.key]) ? (config[field.key] as ClassifyRule[]) : []}
+            onChange={(rules) => onUpdate(field.key, rules)}
+            readOnly={readOnly}
+          />
+        );
+      case 'patterns':
+        return (
+          <PatternsEditor
+            patterns={
+              Array.isArray(config[field.key]) ? (config[field.key] as ExtractPattern[]) : []
+            }
+            onChange={(patterns) => onUpdate(field.key, patterns)}
+            readOnly={readOnly}
+          />
+        );
+      case 'operations':
+        return (
+          <OperationsEditor
+            operations={
+              Array.isArray(config[field.key]) ? (config[field.key] as StrOperation[]) : []
+            }
+            onChange={(operations) => onUpdate(field.key, operations)}
+            readOnly={readOnly}
+          />
+        );
       case 'param-ref':
         return (
           <Input value="" disabled placeholder="Parameters (M5)" className="text-xs opacity-50" />
@@ -425,6 +513,378 @@ function InspectorFieldRenderer({
         </span>
       ))}
     </label>
+  );
+}
+
+function PatternsEditor({
+  patterns,
+  onChange,
+  readOnly = false,
+}: {
+  patterns: ExtractPattern[];
+  onChange: (patterns: ExtractPattern[]) => void;
+  readOnly?: boolean;
+}) {
+  const updatePattern = (index: number, patch: Partial<ExtractPattern>) => {
+    onChange(patterns.map((pattern, i) => (i === index ? { ...pattern, ...patch } : pattern)));
+  };
+
+  const applyPreset = (index: number, presetKey: string) => {
+    const regex = PRESET_REGEX[presetKey as keyof typeof PRESET_REGEX];
+    if (!regex) return;
+    const patch: Partial<ExtractPattern> = { regex };
+    if (!patterns[index]?.name.trim()) {
+      patch.name = presetKey.replace(/-/g, '_');
+    }
+    updatePattern(index, patch);
+  };
+
+  const presetForRegex = (regex: string): string => {
+    const match = Object.entries(PRESET_REGEX).find(([, value]) => value === regex);
+    return match?.[0] ?? 'custom';
+  };
+
+  const addPattern = () => {
+    onChange([...patterns, { name: '', regex: PRESET_REGEX.email }]);
+  };
+
+  const removePattern = (index: number) => {
+    onChange(patterns.filter((_, i) => i !== index));
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      {patterns.map((pattern, i) => (
+        <div key={i} className="flex flex-col gap-1 rounded border border-border p-2">
+          <Input
+            value={pattern.name}
+            readOnly={readOnly}
+            disabled={readOnly}
+            onChange={(e) => updatePattern(i, { name: e.target.value })}
+            placeholder="Output column name"
+            className="text-xs"
+          />
+          <Select
+            value={presetForRegex(pattern.regex)}
+            disabled={readOnly}
+            onValueChange={(v) => {
+              if (v !== 'custom') applyPreset(i, v);
+            }}
+          >
+            <SelectTrigger className="text-xs">
+              <SelectValue placeholder="Preset" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="custom">Custom regex</SelectItem>
+              {(Object.keys(PRESET_REGEX) as (keyof typeof PRESET_REGEX)[]).map((key) => (
+                <SelectItem key={key} value={key}>
+                  {PRESET_LABELS[key]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="flex gap-1">
+            <Input
+              value={pattern.regex}
+              readOnly={readOnly}
+              disabled={readOnly}
+              onChange={(e) => updatePattern(i, { regex: e.target.value })}
+              placeholder="Regular expression"
+              className="flex-1 font-mono text-xs"
+            />
+            {!readOnly && (
+              <button
+                type="button"
+                onClick={() => removePattern(i)}
+                className="px-1 text-xs text-muted-foreground hover:text-foreground"
+              >
+                ×
+              </button>
+            )}
+          </div>
+        </div>
+      ))}
+      {!readOnly && (
+        <button type="button" onClick={addPattern} className="text-xs text-primary hover:underline">
+          + Add pattern
+        </button>
+      )}
+    </div>
+  );
+}
+
+function OperationsEditor({
+  operations,
+  onChange,
+  readOnly = false,
+}: {
+  operations: StrOperation[];
+  onChange: (operations: StrOperation[]) => void;
+  readOnly?: boolean;
+}) {
+  const updateOperation = (index: number, patch: Partial<StrOperation>) => {
+    onChange(
+      operations.map((operation, i) =>
+        i === index ? { ...operation, ...patch, args: patch.args ?? operation.args } : operation,
+      ),
+    );
+  };
+
+  const setOp = (index: number, op: StrOp) => {
+    const args: Record<string, unknown> = {};
+    if (op === 'replace') {
+      args.old = '';
+      args.new = '';
+    } else if (op === 'removeprefix') {
+      args.prefix = '';
+    } else if (op === 'removesuffix') {
+      args.suffix = '';
+    } else if (op === 'zfill') {
+      args.width = 0;
+    }
+    updateOperation(index, { op, args });
+  };
+
+  const updateArg = (index: number, key: string, value: unknown) => {
+    const args = { ...(operations[index]?.args ?? {}), [key]: value };
+    updateOperation(index, { args });
+  };
+
+  const addOperation = () => {
+    onChange([...operations, { op: 'strip', args: {} }]);
+  };
+
+  const removeOperation = (index: number) => {
+    onChange(operations.filter((_, i) => i !== index));
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      {operations.map((operation, i) => {
+        const args = operation.args ?? {};
+        return (
+          <div key={i} className="flex flex-col gap-1 rounded border border-border p-2">
+            <div className="flex gap-1">
+              <Select
+                value={operation.op}
+                disabled={readOnly}
+                onValueChange={(v) => setOp(i, v as StrOp)}
+              >
+                <SelectTrigger className="flex-1 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(STR_OP_LABELS) as StrOp[]).map((op) => (
+                    <SelectItem key={op} value={op}>
+                      {STR_OP_LABELS[op]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {!readOnly && (
+                <button
+                  type="button"
+                  onClick={() => removeOperation(i)}
+                  className="px-1 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+            {operation.op === 'replace' && (
+              <>
+                <Input
+                  value={String(args.old ?? '')}
+                  readOnly={readOnly}
+                  disabled={readOnly}
+                  onChange={(e) => updateArg(i, 'old', e.target.value)}
+                  placeholder="Find text"
+                  className="text-xs"
+                />
+                <Input
+                  value={String(args.new ?? '')}
+                  readOnly={readOnly}
+                  disabled={readOnly}
+                  onChange={(e) => updateArg(i, 'new', e.target.value)}
+                  placeholder="Replace with"
+                  className="text-xs"
+                />
+              </>
+            )}
+            {operation.op === 'removeprefix' && (
+              <Input
+                value={String(args.prefix ?? '')}
+                readOnly={readOnly}
+                disabled={readOnly}
+                onChange={(e) => updateArg(i, 'prefix', e.target.value)}
+                placeholder="Prefix to remove"
+                className="text-xs"
+              />
+            )}
+            {operation.op === 'removesuffix' && (
+              <Input
+                value={String(args.suffix ?? '')}
+                readOnly={readOnly}
+                disabled={readOnly}
+                onChange={(e) => updateArg(i, 'suffix', e.target.value)}
+                placeholder="Suffix to remove"
+                className="text-xs"
+              />
+            )}
+            {operation.op === 'zfill' && (
+              <Input
+                type="number"
+                value={String(args.width ?? 0)}
+                readOnly={readOnly}
+                disabled={readOnly}
+                onChange={(e) => updateArg(i, 'width', Number(e.target.value))}
+                placeholder="Width"
+                className="text-xs"
+              />
+            )}
+          </div>
+        );
+      })}
+      {!readOnly && (
+        <button type="button" onClick={addOperation} className="text-xs text-primary hover:underline">
+          + Add operation
+        </button>
+      )}
+    </div>
+  );
+}
+
+function ClassifyRulesEditor({
+  rules,
+  onChange,
+  readOnly = false,
+}: {
+  rules: ClassifyRule[];
+  onChange: (rules: ClassifyRule[]) => void;
+  readOnly?: boolean;
+}) {
+  const updateRule = (index: number, patch: Partial<ClassifyRule>) => {
+    const next = rules.map((rule, i) => (i === index ? { ...rule, ...patch } : rule));
+    onChange(next);
+  };
+
+  const addRule = () => {
+    onChange([...rules, { match: 'contains', pattern: '', label: '' }]);
+  };
+
+  const removeRule = (index: number) => {
+    onChange(rules.filter((_, i) => i !== index));
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      {rules.map((rule, i) => (
+        <div key={i} className="flex flex-col gap-1 rounded border border-border p-2">
+          <Select
+            value={rule.match}
+            disabled={readOnly}
+            onValueChange={(v) => updateRule(i, { match: v as ClassifyRule['match'] })}
+          >
+            <SelectTrigger className="text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="contains">contains</SelectItem>
+              <SelectItem value="regex">regex</SelectItem>
+            </SelectContent>
+          </Select>
+          <Input
+            value={rule.pattern}
+            readOnly={readOnly}
+            disabled={readOnly}
+            onChange={(e) => updateRule(i, { pattern: e.target.value })}
+            placeholder="Pattern"
+            className="text-xs"
+          />
+          <div className="flex gap-1">
+            <Input
+              value={rule.label}
+              readOnly={readOnly}
+              disabled={readOnly}
+              onChange={(e) => updateRule(i, { label: e.target.value })}
+              placeholder="Label"
+              className="flex-1 text-xs"
+            />
+            {!readOnly && (
+              <button
+                type="button"
+                onClick={() => removeRule(i)}
+                className="px-1 text-xs text-muted-foreground hover:text-foreground"
+              >
+                ×
+              </button>
+            )}
+          </div>
+        </div>
+      ))}
+      {!readOnly && (
+        <button type="button" onClick={addRule} className="text-xs text-primary hover:underline">
+          + Add rule
+        </button>
+      )}
+    </div>
+  );
+}
+
+function StringListEditor({
+  values,
+  onChange,
+  placeholder = 'Name',
+  readOnly = false,
+}: {
+  values: string[];
+  onChange: (values: string[]) => void;
+  placeholder?: string;
+  readOnly?: boolean;
+}) {
+  const updateValue = (index: number, value: string) => {
+    const next = [...values];
+    next[index] = value;
+    onChange(next);
+  };
+
+  const addValue = () => {
+    onChange([...values, '']);
+  };
+
+  const removeValue = (index: number) => {
+    onChange(values.filter((_, i) => i !== index));
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      {values.map((value, i) => (
+        <div key={i} className="flex gap-1">
+          <Input
+            value={value}
+            readOnly={readOnly}
+            disabled={readOnly}
+            onChange={(e) => updateValue(i, e.target.value)}
+            placeholder={placeholder}
+            className="flex-1 text-xs"
+          />
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={() => removeValue(i)}
+              className="px-1 text-xs text-muted-foreground hover:text-foreground"
+            >
+              ×
+            </button>
+          )}
+        </div>
+      ))}
+      {!readOnly && (
+        <button type="button" onClick={addValue} className="text-xs text-primary hover:underline">
+          + Add name
+        </button>
+      )}
+    </div>
   );
 }
 

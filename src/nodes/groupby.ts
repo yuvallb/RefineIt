@@ -27,6 +27,9 @@ export const groupby: NodeDefinition = {
   type: 'groupby',
   label: 'GroupBy',
   category: 'transform',
+  paletteGroup: 'aggregate',
+  paletteOrder: 0,
+  exportVarSlug: 'grouped',
   inputs: [{ id: 'input', label: 'Input' }],
   outputs: 1,
 
@@ -72,7 +75,9 @@ export const groupby: NodeDefinition = {
     return errors;
   },
 
-  compile(config, inputVars, outputVar) {
+  compile(config, inputVars, outputVar, _params?, _context?) {
+    void _params;
+    void _context;
     const groupColumns = parseGroupColumns(config);
     const aggregations = parseAggregations(config);
     const input = inputVars[0];

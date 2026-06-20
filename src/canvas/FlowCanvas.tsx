@@ -6,8 +6,8 @@ import {
   MiniMap,
   applyEdgeChanges,
   applyNodeChanges,
-  getNodesBounds,
   useNodesInitialized,
+  useReactFlow,
   useStore,
   useViewport,
   type Connection,
@@ -20,6 +20,7 @@ import {
 import '@xyflow/react/dist/style.css';
 
 import { validateConnection } from '@/engine/graph-validation';
+import { requestAddNode } from '@/lib/custom-python-gate';
 import type { WorkflowEdge, WorkflowNode } from '@/lib/types';
 import { useUiStore } from '@/state/ui-store';
 import { useWorkflowStore } from '@/state/workflow-store';
@@ -71,11 +72,14 @@ function toFlowEdges(workflowEdges: WorkflowEdge[]): Edge[] {
   }));
 }
 
+type GetNodesBounds = ReturnType<typeof useReactFlow>['getNodesBounds'];
+
 function areAllNodesInViewport(
   nodes: Node[],
   viewport: Viewport,
   width: number,
   height: number,
+  getNodesBounds: GetNodesBounds,
 ): boolean {
   if (nodes.length === 0) return true;
 
@@ -98,6 +102,7 @@ function areAllNodesInViewport(
 }
 
 function CanvasMiniMap() {
+  const { getNodesBounds } = useReactFlow();
   const viewport = useViewport();
   const width = useStore((state) => state.width);
   const height = useStore((state) => state.height);
@@ -108,7 +113,7 @@ function CanvasMiniMap() {
     nodesInitialized &&
     width > 0 &&
     height > 0 &&
-    !areAllNodesInViewport(nodes, viewport, width, height);
+    !areAllNodesInViewport(nodes, viewport, width, height, getNodesBounds);
 
   if (!showMinimap) return null;
 
@@ -297,7 +302,7 @@ export function FlowCanvas({ onDropFile }: FlowCanvasProps) {
 
       const nodeType = event.dataTransfer.getData('application/transformstudio-node');
       if (nodeType) {
-        useWorkflowStore.getState().addNode(nodeType as WorkflowNode['type'], position);
+        requestAddNode(nodeType as WorkflowNode['type'], position);
         return;
       }
 

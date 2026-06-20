@@ -7,7 +7,7 @@ import type { Workflow } from '@/lib/types';
 const workflow: Workflow = {
   id: 'wf1',
   name: 'Sales pipeline',
-  schemaVersion: 1,
+  schemaVersion: 2,
   createdAt: '2026-01-01T00:00:00Z',
   updatedAt: '2026-06-14T12:00:00Z',
   params: [],
@@ -36,9 +36,9 @@ const workflow: Workflow = {
     },
     {
       id: 'out',
-      type: 'output',
+      type: 'output.csv',
       position: { x: 0, y: 0 },
-      config: { format: 'csv', filename: 'output.csv' },
+      config: { filename: 'output.csv' },
     },
   ],
   edges: [
@@ -80,10 +80,10 @@ describe('generateNotebook', () => {
       .map((c) => c.source.join(''))
       .join('\n');
 
-    expect(markdown).toContain('## CSV Source: Load sales');
-    expect(markdown).toContain('`src`');
-    expect(markdown).toContain('## Filter');
-    expect(markdown).toContain('## GroupBy');
+    expect(markdown).toContain('## Step 1: CSV Source: Load sales');
+    expect(markdown).toContain('Node ID: 1');
+    expect(markdown).toContain('## Step 2: Filter');
+    expect(markdown).toContain('## Step 3: GroupBy');
     expect(markdown).toContain('Provide the data file');
   });
 

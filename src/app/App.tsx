@@ -4,10 +4,12 @@ import { FileDropzone } from '@/ui/FileDropzone';
 import { Inspector } from '@/ui/Inspector';
 import { PreviewGrid } from '@/ui/PreviewGrid';
 import { ProfilePanel } from '@/ui/ProfilePanel';
+import { CustomPythonConfirmDialog } from '@/ui/CustomPythonConfirmDialog';
+import { IncompatibleDataDialog } from '@/ui/IncompatibleDataDialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/components/ui/tabs';
 
-import { FileImportProvider } from '@/hooks/useFileImport';
-import { PyodideProvider } from '@/hooks/usePyodide';
+import { FileImportProvider } from '@/hooks/FileImportProvider';
+import { PyodideProvider } from '@/hooks/PyodideProvider';
 import { useExecution } from '@/hooks/useExecution';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useWorkflow } from '@/hooks/useWorkflow';
@@ -84,6 +86,8 @@ function Workspace() {
       </div>
       <Footer />
       <Toaster />
+      <IncompatibleDataDialog />
+      <CustomPythonConfirmDialog />
     </div>
   );
 }

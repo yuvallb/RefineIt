@@ -56,19 +56,19 @@
 |---|---|
 | **Risk** | Changing the workflow schema invalidates saved workflows and shared URLs |
 | **Likelihood** | Certain over time |
-| **Impact** | High — data loss for users |
-| **Mitigation** | `schemaVersion` field from day one. Migration functions (`v1 → v2 → ...`). Test migrations in CI. |
-| **Verification** | Unit test: load a v1 workflow JSON through migration chain → valid current workflow |
+| **Impact** | High — local saves and old share links stop loading |
+| **Mitigation** | `schemaVersion` for reject-forward checks. **No migration chains** — on incompatible IndexedDB (scan **all** workflows on boot), show blocking dialog with **Clear all local data**. Share import / old URLs: explicit error, user rebuilds. Document breaking changes in About/changelog. |
+| **Verification** | Unit test: IndexedDB with unknown node type or stale `schemaVersion` → incompatible dialog; clear → empty app. Share import of old workflow → structured error (no partial load). |
 
-## R7: Expression injection in Filter/Derive nodes
+## R7: Expression injection in Filter/Derive nodes and Custom Python
 
 | | |
 |---|---|
-| **Risk** | User-supplied expressions passed to Python `eval()` could execute arbitrary code |
-| **Likelihood** | Low in v1 (no custom Python node), but Filter/Derive use expressions |
+| **Risk** | User-supplied expressions or Python snippets could execute arbitrary code |
+| **Likelihood** | Low for Filter/Derive (single-expression AST whitelist); Medium when Custom Python is enabled |
 | **Impact** | Medium — Pyodide sandbox limits damage, but still undesirable |
-| **Mitigation** | Use Pandas `df.query()` or `df.eval()` with restricted scope (only column names + params). Do not use bare `exec()`. Custom Python node deferred. |
-| **Verification** | Test that expressions with `import os` or `__import__` are rejected |
+| **Mitigation** | Filter/Derive: Pandas `df.query()` / `df.eval()` with restricted scope; AST whitelist via `validate_expression()` in worker pre-flight. Custom Python (`custom.python`, post-M9): feature-flagged (`VITE_ENABLE_CUSTOM_PYTHON`); first-use confirm dialog; user code wrapped with `inp`/`out` template; `validate_custom_python()` AST parse in worker denies imports, unsafe calls, and dunder access; regex pre-check on main thread; export includes warning comment. |
+| **Verification** | Test that Filter/Derive expressions with `import os` or `__import__` are rejected; Custom Python `import os` rejected at validate time; allowed Pandas transform executes in fixture pipeline |
 
 ## R8: IndexedDB storage limits
 
@@ -119,7 +119,16 @@
 | **Mitigation** | Implement dataset deduplication via content hashing (store the same file once) and a pruning/retention policy for old version snapshots. Use `navigator.storage.estimate()` to show storage usage and warn before limits are hit. |
 | **Verification** | Import 5 × 50 MB files; verify storage usage is reported correctly and pruning triggers when nearing limits. |
 
-## Risk priority matrix
+## R13: Pyodide pyarrow bundle size (Parquet I/O)
+
+| | |
+|---|---|
+| **Risk** | Lazy-loading `pyarrow` in Pyodide adds ~15 MB download — exceeds the 10 MB gate in [12-node-expansion.md](./12-node-expansion.md) |
+| **Likelihood** | High (measured ~15 MB for pyarrow wheel in Pyodide CDN builds) |
+| **Impact** | Medium — slower first Parquet use, larger cache |
+| **Mitigation** | `PARQUET_ENABLED = false` in `src/lib/constants.ts`; `source.parquet` / `output.parquet` hidden from palette until re-evaluated. CSV/JSON I/O ships without pyarrow. |
+| **Verification** | Confirm palette shows Write CSV/JSON only; enabling flag requires explicit product decision + size re-measurement |
+
 
 ```
 Impact

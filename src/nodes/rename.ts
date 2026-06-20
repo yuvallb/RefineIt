@@ -5,6 +5,9 @@ export const rename: NodeDefinition = {
   type: 'rename',
   label: 'Rename',
   category: 'transform',
+  paletteGroup: 'column',
+  paletteOrder: 1,
+  exportVarSlug: 'renamed',
   inputs: [{ id: 'input', label: 'Input' }],
   outputs: 1,
 
@@ -45,7 +48,9 @@ export const rename: NodeDefinition = {
     return errors;
   },
 
-  compile(config, inputVars, outputVar) {
+  compile(config, inputVars, outputVar, _params?, _context?) {
+    void _params;
+    void _context;
     const mapping = parseStringRecord(config.mapping);
     const input = inputVars[0];
     const entries = Object.entries(mapping)

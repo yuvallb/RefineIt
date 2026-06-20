@@ -7,7 +7,7 @@ const nodes: WorkflowNode[] = [
   { id: 'a', type: 'source.csv', position: { x: 0, y: 0 }, config: {} },
   { id: 'b', type: 'filter', position: { x: 0, y: 0 }, config: {} },
   { id: 'c', type: 'groupby', position: { x: 0, y: 0 }, config: {} },
-  { id: 'd', type: 'output', position: { x: 0, y: 0 }, config: {} },
+  { id: 'd', type: 'output.csv', position: { x: 0, y: 0 }, config: {} },
 ];
 
 describe('topoSort', () => {

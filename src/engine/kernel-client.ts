@@ -247,7 +247,10 @@ export class KernelClient {
     return result;
   }
 
-  async exportNodeOutput(nodeId: string, format: 'csv' | 'json'): Promise<ExportNodeResult> {
+  async exportNodeOutput(
+    nodeId: string,
+    format: 'csv' | 'json' | 'parquet',
+  ): Promise<ExportNodeResult> {
     await this.init();
 
     if (!this.api) {
@@ -287,6 +290,16 @@ export class KernelClient {
     }
 
     return this.api.validateExpression(expr);
+  }
+
+  async validateCustomPython(code: string): Promise<ExpressionValidationResult> {
+    await this.init();
+
+    if (!this.api) {
+      return { valid: false, error: 'Worker not available' };
+    }
+
+    return this.api.validateCustomPython(code);
   }
 }
 

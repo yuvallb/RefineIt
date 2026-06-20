@@ -1,3 +1,4 @@
+import { buildExportNameMap } from '@/engine/export-names';
 import {
   compileNodeExportCode,
   getNodeMarkdown,
@@ -43,19 +44,22 @@ export function generateNotebook(workflow: PipelineWorkflow): Notebook {
     },
   ];
 
+  const exportNames = buildExportNameMap(workflow);
+
   for (const node of getSortedPipelineNodes(workflow)) {
     const def = getNodeDefinition(node.type);
+    const step = exportNames.get(node.id)?.step;
     cells.push({
       cell_type: 'markdown',
       metadata: {},
-      source: toNbSource(getNodeMarkdown(node, def)),
+      source: toNbSource(getNodeMarkdown(node, def, step)),
     });
     cells.push({
       cell_type: 'code',
       metadata: {},
       execution_count: null,
       outputs: [],
-      source: toNbSource(compileNodeExportCode(node, workflow)),
+      source: toNbSource(compileNodeExportCode(node, workflow, exportNames)),
     });
   }
 

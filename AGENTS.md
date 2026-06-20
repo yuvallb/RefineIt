@@ -47,9 +47,9 @@ When plan docs and code disagree, **plan docs win** until the user explicitly ch
 
 - Excel import (`openpyxl`)
 - dbt/SQL export
-- Custom Python node (user-supplied code)
+- Custom Python node — post-M9 only; see [`plan/12-node-expansion.md`](./plan/12-node-expansion.md) Phase 12
 - Arrow IPC / chunking for >100 MB datasets
-- Any server, API, or cloud dependency
+- Any server, API, or cloud dependency (AI nodes use client-side provider APIs only — see [`tasks/post-M4-ai-phase.md`](./tasks/post-M4-ai-phase.md))
 
 ---
 
@@ -69,6 +69,8 @@ Follow **M0 → M1 → … → M9** in order. See [`plan/07-milestones.md`](./pl
 | **M7** | Jupyter notebook export |
 | **M8** | URL/file sharing |
 | **M9** | Hardening, perf, polish |
+
+**Post-M9 (optional):** Node palette expansion and power features — [`plan/12-node-expansion.md`](./plan/12-node-expansion.md) (phases 0–12). Do not start until M9 DoD is met unless the user explicitly requests a post-M4 track item.
 
 **Rules:**
 
@@ -201,7 +203,10 @@ Filter/Derive expressions must be validated via Python `ast.parse()` + AST white
 ### Schema evolution
 
 - Workflow objects include `schemaVersion` (start at `1`).
-- Add migration functions when bumping schema version; test migrations in CI.
+- **No migration chains** for workflow or node-type changes — bump `WORKFLOW_SCHEMA_VERSION` and treat older local data as incompatible.
+- On boot: scan **all** workflows in IndexedDB; if any record is incompatible (`schemaVersion < CURRENT`, unknown node type), show blocking dialog → **Clear all local data**.
+- Share URL / file import: reject incompatible payloads with explicit errors (fragile links are acceptable).
+- See [`plan/03-domain-model.md`](./plan/03-domain-model.md) and [`plan/12-node-expansion.md`](./plan/12-node-expansion.md) § Persistence & compatibility policy.
 
 ---
 
@@ -213,9 +218,9 @@ See [`plan/10-testing.md`](./plan/10-testing.md).
 |-------|------|--------------|
 | Unit | Vitest (Node) | Node `compile()` / `validate()`, topo-sort, fingerprints, serialize/compress |
 | Integration | Vitest **Browser Mode** | Pyodide worker RPC — **not** Node/jsdom |
-| E2E | Playwright | Vertical slice (M2), sharing (M8), Pyodide smoke |
+| E2E | Playwright | Vertical slice (M2), sharing (M8), Pyodide smoke — **on-demand / heavy suite**, not CI default |
 
-**Add unit tests** when implementing node types (M4) and engine modules. **Add E2E** for milestone DoD flows.
+**Add unit tests** when implementing node types (M4 and post-M4) and engine modules. **Add E2E** for milestone DoD flows and post-M4 phases; run heavy E2E locally before releases (`npm run test:e2e`). CI runs unit tests only (see [`plan/10-testing.md`](./plan/10-testing.md)).
 
 Fixtures go in `tests/fixtures/`; demo data in `public/demo/`.
 
@@ -241,6 +246,7 @@ Do not snapshot-test canvas layout or histogram pixels.
 | Worker crash | Heartbeat + restart + IndexedDB restore |
 | Expression injection | AST whitelist before eval |
 | Skipping milestones | Stop — finish current milestone DoD first |
+| Incompatible local data | Clear all local data — never silent migration |
 
 ---
 

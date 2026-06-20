@@ -9,7 +9,7 @@ describe('workflow params', () => {
       workflow: {
         id: 'wf1',
         name: 'Test',
-        schemaVersion: 1,
+        schemaVersion: 2,
         nodes: [],
         edges: [],
         params: [],

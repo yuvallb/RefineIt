@@ -169,6 +169,9 @@ export function ProfilePanel() {
   useProfile();
 
   const selectedNodeId = useWorkflowStore((s) => s.selectedNodeId);
+  const selectedNode = useWorkflowStore((s) =>
+    s.selectedNodeId ? s.workflow.nodes.find((n) => n.id === s.selectedNodeId) : undefined,
+  );
   const staleNodeIds = useWorkflowStore((s) => s.staleNodeIds);
   const isRunning = useRuntimeStore((s) => s.isRunning);
   const runtime = useRuntimeStore((s) =>
@@ -201,6 +204,22 @@ export function ProfilePanel() {
 
   if (isLoading) {
     return <ProfileSkeleton />;
+  }
+
+  if (runtime?.summaryMarkdown) {
+    return (
+      <div className="flex h-full flex-col">
+        <div className="border-b border-border px-4 py-2">
+          <p className="text-xs font-medium">Summary</p>
+          <p className="text-[10px] text-muted-foreground">
+            {selectedNode?.type === 'ai.summarize' ? 'Stats summary (panel mode)' : 'Node output'}
+          </p>
+        </div>
+        <pre className="flex-1 overflow-y-auto whitespace-pre-wrap p-4 font-mono text-xs leading-relaxed">
+          {runtime.summaryMarkdown}
+        </pre>
+      </div>
+    );
   }
 
   if (!runtime?.profile || runtime.profile.length === 0) {

@@ -6,8 +6,11 @@ function parseAxis(config: Record<string, unknown>): 0 | 1 {
 
 export const concat: NodeDefinition = {
   type: 'concat',
-  label: 'Concat',
+  label: 'Union (Concat)',
   category: 'transform',
+  paletteGroup: 'combine',
+  paletteOrder: 1,
+  exportVarSlug: 'concatenated',
   inputs: [
     { id: 'input1', label: 'Input 1' },
     { id: 'input2', label: 'Input 2' },
@@ -37,7 +40,9 @@ export const concat: NodeDefinition = {
     return errors;
   },
 
-  compile(config, inputVars, outputVar) {
+  compile(config, inputVars, outputVar, _params?, _context?) {
+    void _params;
+    void _context;
     const axis = parseAxis(config);
     const inputs = inputVars.map((v) => v).join(', ');
     return `${outputVar} = pd.concat([${inputs}], axis=${axis})`;

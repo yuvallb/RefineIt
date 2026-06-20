@@ -23,6 +23,9 @@ export const sourceCsv: NodeDefinition = {
   type: 'source.csv',
   label: 'CSV Source',
   category: 'source',
+  paletteGroup: 'io',
+  paletteOrder: 0,
+  exportVarSlug: 'csv_data',
   inputs: [],
   outputs: 1,
 
@@ -35,7 +38,9 @@ export const sourceCsv: NodeDefinition = {
     };
   },
 
-  validate(config) {
+  validate(config, _inputSchemas) {
+    void _inputSchemas;
+
     if (!config.filename || typeof config.filename !== 'string') {
       return [{ field: 'filename', message: 'Import a CSV file first' }];
     }

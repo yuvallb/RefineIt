@@ -19,7 +19,7 @@
 - **Strip:** runtime state, previews, errors, selection, UI state
 - **Include:** id, name, schemaVersion, nodes, edges, params, createdAt, updatedAt
 - **Exclude:** dataset bytes, IndexedDB references, preview payloads
-- `deserializeWorkflow(json): Workflow` — validate schemaVersion, run migrations
+- `deserializeWorkflow(json): Workflow` — validate `schemaVersion` (reject if `> CURRENT` or `< CURRENT`), reject unknown node types; **no migrations**
 
 ---
 
@@ -115,7 +115,7 @@ Measure encoded string length before writing hash.
 
 - Shared URLs include params with defaults
 - Recipient can Run with parameters immediately after importing data
-- `schemaVersion` migration on deserialize protects old links after schema bumps
+- Old share links may fail after `WORKFLOW_SCHEMA_VERSION` bumps — explicit error, no auto-migration (see [`plan/12-node-expansion.md`](../plan/12-node-expansion.md))
 
 ---
 

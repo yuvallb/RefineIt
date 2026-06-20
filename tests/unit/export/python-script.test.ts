@@ -7,7 +7,7 @@ import type { Workflow } from '@/lib/types';
 const workflow: Workflow = {
   id: 'wf1',
   name: 'Sales pipeline',
-  schemaVersion: 1,
+  schemaVersion: 2,
   createdAt: '2026-01-01T00:00:00Z',
   updatedAt: '2026-06-14T12:00:00Z',
   params: [{ name: 'country', type: 'string', default: 'US' }],
@@ -58,7 +58,7 @@ describe('generatePythonScript', () => {
     expect(script).toContain('import pandas as pd');
     expect(script).toContain('params = {');
     expect(script).toContain('# CSV Source');
-    expect(script).toContain('# Node ID: src');
+    expect(script).toContain('# Node ID: 1');
     expect(script).toContain('# Type: source.csv');
     expect(script).toContain('# Source file: sales.csv');
     expect(script).toContain('# Filter');

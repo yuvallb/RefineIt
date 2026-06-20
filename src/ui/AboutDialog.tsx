@@ -1,9 +1,21 @@
 import { Github } from 'lucide-react';
+import { useState } from 'react';
 
+import { clearAllLocalData } from '@/data/db';
 import { SITE } from '@/lib/site-config';
 import { useUiStore } from '@/state/ui-store';
 import { BrandLogo } from '@/ui/BrandLogo';
 import { SocialShareButtons } from '@/ui/SocialShareButtons';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/ui/components/ui/alert-dialog';
 import { Button } from '@/ui/components/ui/button';
 import {
   Dialog,
@@ -16,9 +28,17 @@ import {
 export function AboutDialog() {
   const open = useUiStore((s) => s.aboutDialogOpen);
   const setOpen = useUiStore((s) => s.setAboutDialogOpen);
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
+
+  const handleClearLocalData = async () => {
+    await clearAllLocalData();
+    setClearConfirmOpen(false);
+    setOpen(false);
+  };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <>
+      <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <div className="flex items-center gap-3">
@@ -55,6 +75,11 @@ export function AboutDialog() {
           </section>
 
           <section>
+            <h3 className="mb-1 font-medium">Power features</h3>
+            <p className="text-muted-foreground">{SITE.powerUserNote}</p>
+          </section>
+
+          <section>
             <h3 className="mb-2 font-medium">Share RefineIt</h3>
             <SocialShareButtons />
           </section>
@@ -71,6 +96,9 @@ export function AboutDialog() {
                 Report an issue
               </a>
             </Button>
+            <Button variant="outline" size="sm" onClick={() => setClearConfirmOpen(true)}>
+              Clear all local data
+            </Button>
           </section>
 
           <footer className="border-t border-border pt-3 text-xs text-muted-foreground">
@@ -79,6 +107,25 @@ export function AboutDialog() {
         </div>
       </DialogContent>
     </Dialog>
+
+      <AlertDialog open={clearConfirmOpen} onOpenChange={setClearConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear all local data?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes all workflows, datasets, and version history stored in your
+              browser. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void handleClearLocalData()}>
+              Clear all local data
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 

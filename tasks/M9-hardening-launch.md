@@ -191,22 +191,20 @@ M1 DoD requires a UI-visible Pyodide smoke test. Integration coverage exists (`t
 
 ---
 
-## Task 14: Schema migration & data-repo unit tests
-
-Static review found migration infrastructure without test coverage.
+## Task 14: Schema compatibility & data-repo unit tests
 
 ### Implementation
 
-- Add `tests/unit/data/migrations.test.ts`:
-  - `migrateWorkflow()` round-trip at current `WORKFLOW_SCHEMA_VERSION`
-  - Future: wire `MIGRATIONS` map and test `v1-to-v2` when schema bumps
+- `tests/unit/data/migrations.test.ts` (existing): `migrateWorkflow()` no-op at current version only — do not add migration chains.
+- Add tests for **incompatible** share payloads: unknown node type, `schemaVersion < WORKFLOW_SCHEMA_VERSION`.
 - Add `tests/unit/data/version-repo.test.ts`:
   - CRUD for version snapshots (create, list, get, delete)
   - Fork/revert data integrity at repo layer
+- Post-M4: `validateAllStoredWorkflows()` scans all IndexedDB workflows (see M6 Task 11 / node-expansion policy).
 
 ### Acceptance
 
-- Both test files pass in `npm run test:unit`.
+- Test files pass in `npm run test:unit`.
 
 ---
 
@@ -292,11 +290,11 @@ Per [`plan/UX-guidelines.md`](../plan/UX-guidelines.md):
 | Layer | What to test | File |
 |-------|--------------|------|
 | Unit | Undo/redo stack (if implemented) | `tests/unit/state/undo.test.ts` |
-| Unit | Workflow schema migrations | `tests/unit/data/migrations.test.ts` |
+| Unit | Schema compatibility (no migration chain) | `tests/unit/data/migrations.test.ts` |
 | Unit | Version repo CRUD | `tests/unit/data/version-repo.test.ts` |
 | Unit | All existing unit tests still pass | full suite |
 | Integration | Memory cleanup on node delete | `tests/integration/memory.test.ts` |
-| E2E | Full suite green | `tests/e2e/*.spec.ts` |
+| E2E (on-demand) | Heavy suite before release | `npm run test:e2e` |
 | Manual | 50 MB CSV performance | checklist below |
 | Manual | Lighthouse performance/a11y scores | — |
 

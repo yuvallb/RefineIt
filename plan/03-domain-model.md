@@ -11,7 +11,7 @@ The **workflow** (nodes, edges, parameters) is serializable and shareable.
 type Workflow = {
   id: string;
   name: string;
-  schemaVersion: number;       // for migrations (start at 1)
+  schemaVersion: number;       // reject-forward guard (see Schema versioning)
   nodes: WorkflowNode[];
   edges: WorkflowEdge[];
   params: WorkflowParam[];
@@ -177,7 +177,11 @@ type PreviewPayload = {
 
 ## Schema versioning
 
-- `schemaVersion` on `Workflow` starts at `1`.
-- On load, if `schemaVersion < CURRENT`, run migration functions sequentially.
-- Migrations are pure functions: `Workflow_v1 → Workflow_v2`.
-- Protects shared URLs and saved versions from breaking on schema changes.
+RefineIt is pre-launch; **no incremental workflow migrations**. See [12-node-expansion.md](./12-node-expansion.md) § Persistence & compatibility policy.
+
+- `schemaVersion` on `Workflow` starts at `1`; bump when breaking node types or workflow shape changes.
+- **Reject forward:** if `schemaVersion > WORKFLOW_SCHEMA_VERSION` (share import / file load), show error — user must update the app.
+- **Reject backward:** if `schemaVersion < WORKFLOW_SCHEMA_VERSION`, or any stored workflow contains unknown node types, treat IndexedDB as **incompatible** — blocking dialog with **Clear all local data** (no auto-upgrade).
+- **Boot validation:** scan **every** workflow record in IndexedDB (not only the active workflow) before allowing normal app use.
+- **Share URLs:** fragile by design — old links may fail after schema bumps; no migration path (user rebuilds or re-exports).
+- Do **not** add migration chains in `src/data/migrations/` for node expansion; `migrateWorkflow()` may remain as a no-op or be removed.

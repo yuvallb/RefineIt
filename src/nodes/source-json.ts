@@ -15,6 +15,9 @@ export const sourceJson: NodeDefinition = {
   type: 'source.json',
   label: 'JSON Source',
   category: 'source',
+  paletteGroup: 'io',
+  paletteOrder: 1,
+  exportVarSlug: 'json_data',
   inputs: [],
   outputs: 1,
 
@@ -25,7 +28,9 @@ export const sourceJson: NodeDefinition = {
     };
   },
 
-  validate(config) {
+  validate(config, _inputSchemas) {
+    void _inputSchemas;
+
     if (!config.filename || typeof config.filename !== 'string') {
       return [{ field: 'filename', message: 'Import a JSON file first' }];
     }
