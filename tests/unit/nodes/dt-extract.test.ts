@@ -41,4 +41,22 @@ describe('dtExtract', () => {
     );
     expect(errors.some((e) => e.field === 'column')).toBe(true);
   });
+
+  it('rejects unsupported date parts', () => {
+    const errors = dtExtract.validate(
+      { column: 'created_at', parts: ['created_at', 'year'] },
+      [schema],
+    );
+    expect(errors.some((e) => e.field === 'parts')).toBe(true);
+  });
+
+  it('uses multi-select options for parts', () => {
+    const partsField = dtExtract.inspectorSchema().find((field) => field.key === 'parts');
+    expect(partsField?.kind).toBe('multi-select');
+    if (partsField?.kind === 'multi-select') {
+      expect(partsField.options).toContain('year');
+      expect(partsField.options).toContain('month');
+      expect(partsField.options).not.toContain('created_at');
+    }
+  });
 });

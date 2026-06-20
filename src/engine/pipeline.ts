@@ -247,6 +247,25 @@ export async function buildPipelineRequest(
       continue;
     }
 
+    const inputSchemas = resolveUpstreamSchemasForValidation(
+      node.id,
+      workflow,
+      runtimeByNode,
+      datasets,
+      def.inputs,
+      plannedIds,
+      staleNodeIds,
+    );
+    const validateContext = getValidateContext(node, workflow, runtimeByNode, def.inputs);
+    const configErrors = def.validate(node.config, inputSchemas, validateContext);
+    if (configErrors.length > 0) {
+      validationFailures.push({
+        nodeId: node.id,
+        message: configErrors.map((e) => e.message).join('; '),
+      });
+      continue;
+    }
+
     if (def.inputs.length > 0 && !upstreamIsReady(node.id, workflow, staleNodeIds, runtimeByNode, plannedIds)) {
       deferStale(node.id, isStale);
       continue;
@@ -264,25 +283,6 @@ export async function buildPipelineRequest(
 
     if (node.type === 'source.parquet' && !dataset) {
       deferStale(node.id, isStale);
-      continue;
-    }
-
-    const inputSchemas = resolveUpstreamSchemasForValidation(
-      node.id,
-      workflow,
-      runtimeByNode,
-      datasets,
-      def.inputs,
-      plannedIds,
-      staleNodeIds,
-    );
-    const validateContext = getValidateContext(node, workflow, runtimeByNode, def.inputs);
-    const configErrors = def.validate(node.config, inputSchemas, validateContext);
-    if (configErrors.length > 0) {
-      validationFailures.push({
-        nodeId: node.id,
-        message: configErrors.map((e) => e.message).join('; '),
-      });
       continue;
     }
 

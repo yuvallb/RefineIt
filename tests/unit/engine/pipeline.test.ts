@@ -140,6 +140,32 @@ describe('buildPipelineRequest', () => {
     expect(request.deferredStaleNodeIds).toEqual(['flt', 'grp']);
   });
 
+  it('validates config before waiting for upstream readiness', async () => {
+    const withExtract: Workflow = {
+      ...workflow,
+      nodes: [
+        ...workflow.nodes,
+        {
+          id: 'dt',
+          type: 'dt.extract',
+          position: { x: 300, y: 0 },
+          config: { column: 'created_at', parts: ['created_at'], parse: false, format: '' },
+        },
+      ],
+      edges: [...workflow.edges, { id: 'e3', source: 'grp', target: 'dt' }],
+    };
+
+    const request = await buildPipelineRequest({
+      workflow: withExtract,
+      staleNodeIds: new Set(['src', 'flt', 'grp', 'dt']),
+      runtimeByNode: new Map(),
+      datasets: { src: dataset },
+    });
+
+    expect(request.validationFailures.some((failure) => failure.nodeId === 'dt')).toBe(true);
+    expect(request.nodes.some((n) => n.nodeId === 'dt')).toBe(false);
+  });
+
   it('skips unchanged source on incremental recompute', async () => {
     const runtime = await updateRuntimeFingerprints(
       workflow,

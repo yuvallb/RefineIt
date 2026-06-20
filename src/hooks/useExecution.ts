@@ -70,6 +70,9 @@ export function useExecution() {
           });
         }
         runtimeActions.setNodeStates(Object.fromEntries(updatedRuntime.entries()));
+        workflowState.clearStaleForNodes(
+          request.validationFailures.map((failure) => failure.nodeId),
+        );
       }
 
       if (request.nodes.length === 0 && deleteNodeIds.length === 0) {
