@@ -1,9 +1,13 @@
 import { Toaster as Sonner, type ToasterProps } from 'sonner';
 
+import { useUiStore } from '@/state/ui-store';
+
 const Toaster = ({ ...props }: ToasterProps) => {
+  const colorMode = useUiStore((s) => s.colorMode);
+
   return (
     <Sonner
-      theme="system"
+      theme={colorMode}
       position="bottom-center"
       offset={{ bottom: '2.25rem' }}
       visibleToasts={3}

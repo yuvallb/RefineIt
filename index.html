@@ -21,6 +21,15 @@
     <title>RefineIt</title>
   </head>
   <body>
+    <script>
+      (function () {
+        try {
+          if (localStorage.getItem('refineit.colorMode') === 'dark') {
+            document.documentElement.classList.add('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
     <div id="root"></div>
     <!-- GitHub Pages SPA route restoration (see public/404.html) -->
     <script>

@@ -12,6 +12,7 @@ import { FileImportProvider } from '@/hooks/FileImportProvider';
 import { PyodideProvider } from '@/hooks/PyodideProvider';
 import { useExecution } from '@/hooks/useExecution';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useTheme } from '@/hooks/useTheme';
 import { useWorkflow } from '@/hooks/useWorkflow';
 import { installTestBridge } from '@/test/bridge';
 import { useUiStore } from '@/state/ui-store';
@@ -29,6 +30,7 @@ function Workspace() {
   useWorkflow();
   useExecution();
   useKeyboardShortcuts();
+  useTheme();
   const isHydrated = useWorkflowStore((s) => s.isHydrated);
   const bottomPanelOpen = useUiStore((s) => s.bottomPanelOpen);
   const rightPanelTab = useUiStore((s) => s.rightPanelTab);

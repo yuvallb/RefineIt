@@ -140,6 +140,7 @@ export function FlowCanvas({ onDropFile }: FlowCanvasProps) {
   const workflow = useWorkflowStore((s) => s.workflow);
   const selectedNodeId = useWorkflowStore((s) => s.selectedNodeId);
   const compareMode = useUiStore((s) => s.compareMode);
+  const colorMode = useUiStore((s) => s.colorMode);
   const addEdgeToStore = useWorkflowStore((s) => s.addEdge);
   const removeEdge = useWorkflowStore((s) => s.removeEdge);
   const removeNode = useWorkflowStore((s) => s.removeNode);
@@ -334,6 +335,7 @@ export function FlowCanvas({ onDropFile }: FlowCanvasProps) {
         nodes={flowNodes}
         edges={flowEdges}
         nodeTypes={nodeTypes}
+        colorMode={colorMode}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={compareMode ? undefined : onConnect}

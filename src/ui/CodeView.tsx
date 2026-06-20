@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import CodeMirror from '@uiw/react-codemirror';
 import { python } from '@codemirror/lang-python';
+import { oneDark } from '@codemirror/theme-one-dark';
 
 import { generateNodeCode, generatePipelineCode } from '@/engine/codegen';
 import { useUiStore } from '@/state/ui-store';
@@ -11,6 +12,7 @@ export function CodeView() {
   const selectedNodeId = useWorkflowStore((s) => s.selectedNodeId);
   const codeViewMode = useUiStore((s) => s.codeViewMode);
   const setCodeViewMode = useUiStore((s) => s.setCodeViewMode);
+  const colorMode = useUiStore((s) => s.colorMode);
 
   const code = useMemo(() => {
     if (codeViewMode === 'node' && selectedNodeId) {
@@ -18,6 +20,12 @@ export function CodeView() {
     }
     return generatePipelineCode(workflow);
   }, [codeViewMode, selectedNodeId, workflow]);
+
+  const extensions = useMemo(() => {
+    const exts = [python()];
+    if (colorMode === 'dark') exts.push(oneDark);
+    return exts;
+  }, [colorMode]);
 
   return (
     <div className="flex h-full flex-col">
@@ -45,7 +53,7 @@ export function CodeView() {
       <div className="min-h-0 flex-1 overflow-auto">
         <CodeMirror
           value={code || '# Add nodes to generate code'}
-          extensions={[python()]}
+          extensions={extensions}
           editable={false}
           basicSetup={{ lineNumbers: true, foldGutter: true }}
           className="h-full text-xs"

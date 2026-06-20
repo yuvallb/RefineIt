@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 import type { PaletteGroup } from '@/nodes/types';
 import type { Workflow, WorkflowDiff } from '@/lib/types';
+import { type ColorMode, readStoredColorMode, writeStoredColorMode } from '@/lib/theme';
 
 export type CodeViewMode = 'node' | 'pipeline';
 export type SaveStatus = 'idle' | 'saving' | 'saved';
@@ -33,6 +34,7 @@ interface UiState {
   customPythonConfirmOpen: boolean;
   customPythonPendingPosition: { x: number; y: number } | null;
   paletteCollapseState: Partial<Record<PaletteGroup, boolean>>;
+  colorMode: ColorMode;
 
   setBottomPanelOpen: (open: boolean) => void;
   setCodeViewMode: (mode: CodeViewMode) => void;
@@ -52,6 +54,8 @@ interface UiState {
   openCustomPythonConfirm: (position: { x: number; y: number }) => void;
   closeCustomPythonConfirm: () => void;
   setPaletteGroupCollapsed: (group: PaletteGroup, collapsed: boolean) => void;
+  setColorMode: (mode: ColorMode) => void;
+  toggleColorMode: () => void;
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -73,6 +77,7 @@ export const useUiStore = create<UiState>((set) => ({
   customPythonConfirmOpen: false,
   customPythonPendingPosition: null,
   paletteCollapseState: {},
+  colorMode: readStoredColorMode(),
 
   setBottomPanelOpen(open) {
     set({ bottomPanelOpen: open });
@@ -146,5 +151,15 @@ export const useUiStore = create<UiState>((set) => ({
     set((state) => ({
       paletteCollapseState: { ...state.paletteCollapseState, [group]: collapsed },
     }));
+  },
+
+  setColorMode(mode) {
+    set({ colorMode: mode });
+    writeStoredColorMode(mode);
+  },
+
+  toggleColorMode() {
+    const next = useUiStore.getState().colorMode === 'dark' ? 'light' : 'dark';
+    useUiStore.getState().setColorMode(next);
   },
 }));

@@ -8,6 +8,7 @@ import { Button } from '@/ui/components/ui/button';
 import { ExportDialog } from '@/ui/ExportDialog';
 import { ParamDialog } from '@/ui/ParamDialog';
 import { ShareDialog } from '@/ui/ShareDialog';
+import { ThemeToggle } from '@/ui/ThemeToggle';
 import { VersionHistory } from '@/ui/VersionHistory';
 import { WorkflowSwitcher } from '@/ui/WorkflowSwitcher';
 import { useRuntimeStore } from '@/state/runtime-store';
@@ -69,6 +70,7 @@ export function Header() {
           )}
         </div>
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           {compareMode && (
             <Button
               variant="outline"

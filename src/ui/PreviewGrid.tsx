@@ -8,6 +8,10 @@ import DataEditor, {
 import '@glideapps/glide-data-grid/dist/index.css';
 
 import { PREVIEW_ROW_CAP } from '@/lib/constants';
+import {
+  PREVIEW_GRID_DARK_THEME,
+  PREVIEW_GRID_LIGHT_THEME,
+} from '@/lib/theme';
 import { useRuntimeStore } from '@/state/runtime-store';
 import { useUiStore } from '@/state/ui-store';
 import { useWorkflowStore } from '@/state/workflow-store';
@@ -21,6 +25,7 @@ function formatCell(value: unknown): string {
 export function PreviewGrid() {
   const selectedNodeId = useWorkflowStore((s) => s.selectedNodeId);
   const highlightedColumn = useUiStore((s) => s.highlightedColumn);
+  const colorMode = useUiStore((s) => s.colorMode);
   const isRunning = useRuntimeStore((s) => s.isRunning);
   const preview = useRuntimeStore((s) =>
     selectedNodeId ? (s.byNodeId.get(selectedNodeId)?.preview ?? null) : null,
@@ -124,6 +129,8 @@ export function PreviewGrid() {
 
   const showing = Math.min(preview.rows.length, PREVIEW_ROW_CAP);
 
+  const gridTheme = colorMode === 'dark' ? PREVIEW_GRID_DARK_THEME : PREVIEW_GRID_LIGHT_THEME;
+
   return (
     <div className="flex h-full flex-col">
       <div className="border-b border-border px-3 py-1.5 text-xs text-muted-foreground">
@@ -139,6 +146,7 @@ export function PreviewGrid() {
           rows={rowCount}
           getCellContent={getCellContent}
           highlightRegions={highlightRegions}
+          theme={gridTheme}
           width="100%"
           height="100%"
           smoothScrollX

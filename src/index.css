@@ -1,5 +1,7 @@
 @import 'tailwindcss';
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -104,5 +106,20 @@
     max-height: 7rem;
     overflow-y: auto;
     align-items: flex-start;
+  }
+
+  .dark .react-flow__controls-button {
+    background: var(--card);
+    border-color: var(--border);
+    color: var(--foreground);
+    fill: var(--foreground);
+  }
+
+  .dark .react-flow__controls-button:hover {
+    background: var(--muted);
+  }
+
+  .dark .react-flow__minimap {
+    background: var(--card);
   }
 }
