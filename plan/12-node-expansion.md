@@ -11,9 +11,31 @@ Expand RefineIt from the current M4 v1 library (14 node types) to a grouped, sea
 ## Goals
 
 1. Replace the flat Source / Transform / Output palette with **12 collapsible groups** (sections a–l below).
-2. Implement missing node types incrementally without breaking shared workflows (`schemaVersion` migrations as needed).
+2. Implement missing node types incrementally on a **clean local store** — no backward-compatible workflow migrations (see [Persistence & compatibility policy](#persistence--compatibility-policy)).
 3. Preserve the existing node contract (`validate`, `compile`, `inspectorSchema`) — one file per node under `src/nodes/`.
 4. Keep all Pandas execution in the Web Worker; previews capped at 100 rows on the main thread.
+
+## Persistence & compatibility policy
+
+RefineIt is pre-launch / fast-evolving. **Do not implement workflow migration chains** for node expansion (e.g. `output` → `output.csv`, bumped `schemaVersion`).
+
+| Surface | On incompatible data | Implementation |
+|---------|----------------------|----------------|
+| **IndexedDB** (workflows, datasets, versions) | Block load; show blocking dialog explaining the app was updated | Primary action: **Clear all local data** (`db.delete()` + reset Zustand stores); secondary: dismiss (stay on empty shell) |
+| **Share URL / `.refineit.json` import** | Reject with explicit error (already: unknown node type, `schemaVersion` too high) | No auto-migration; user message: *"This workflow was created with an older version. Rebuild it in the current app or ask the author to re-export."* |
+| **Version snapshots** (Dexie `versions` table) | Same as IndexedDB — cleared with **Clear all local data** | No per-snapshot migration |
+
+**Still keep `schemaVersion` on workflow JSON** — used for **reject-forward** checks (`schemaVersion > CURRENT` → error), not for incremental upgrades.
+
+**Remove / stop extending:** `src/data/migrations/*` migration chain for node-type changes. Existing stub can remain unused or be deleted when implementing the clear-data dialog.
+
+**UX (post-M4 Phase 0):**
+
+- [ ] `IncompatibleDataDialog` on app boot when Dexie open fails **or** `validateAllStoredWorkflows()` finds any incompatible record.
+- [ ] `validateAllStoredWorkflows()` in `src/data/workflow-repo.ts`: load **every** workflow from IndexedDB; fail if `schemaVersion < WORKFLOW_SCHEMA_VERSION`, unknown node `type`, or Dexie schema mismatch — **not** only the active workflow.
+- [ ] `clearAllLocalData()` in `src/data/db.ts`: delete DB, re-init, reset `workflow-store` + `runtime-store`, toast confirmation.
+- [ ] Settings or About: manual **Clear all local data** (same path as incompatible flow).
+- [ ] Unit test: IndexedDB with two workflows — one valid, one with unknown node type → dialog; clear → empty app.
 
 ## Non-goals (this plan)
 
@@ -34,6 +56,7 @@ Expand RefineIt from the current M4 v1 library (14 node types) to a grouped, sea
 - [ ] Define `PaletteGroup` union matching sections a–l (see group table below).
 - [ ] Keep `category: 'source' | 'transform' | 'output'` for execution semantics (topo sort, source import flow); `paletteGroup` is **UI-only**.
 - [ ] Add `paletteOrder?: number` for stable sort within a group.
+- [ ] Add optional `hiddenInPalette?: boolean` — register node for execution/codegen but omit from palette (e.g. `select` drop mode vs dedicated `drop` node).
 - [ ] Register `paletteGroup` on all 14 existing nodes (map to appropriate groups).
 - [ ] Export `getNodesByPaletteGroup(): Record<PaletteGroup, NodeDefinition[]>` from `src/nodes/registry.ts`.
 - [ ] Unit test: every registered node has a valid `paletteGroup`; no duplicate `type` IDs.
@@ -41,7 +64,8 @@ Expand RefineIt from the current M4 v1 library (14 node types) to a grouped, sea
 ### 0.2 Collapsible palette UI
 
 - [ ] Refactor `src/canvas/NodePalette.tsx` to render **collapsible sections** (shadcn `Collapsible` or equivalent).
-- [ ] Section header: group label + node count badge; chevron toggle; default **expanded** for groups that contain nodes the user has used in the current session (optional polish — can default all expanded in v1).
+- [ ] Section header: group label + node count badge; chevron toggle; default **all groups expanded** in v1 (session-based “expand used groups” is optional polish).
+- [ ] Show **all 12 groups** even when count is 0 (empty groups collapsed by default, or shown as “0” with no nodes — pick one and document in UX-guidelines).
 - [ ] Persist collapse state in `ui-store` (keyed by `paletteGroup`) so reload restores user preference.
 - [ ] Add **search/filter** input above groups: filters nodes by label and `type` ID across all groups; hide empty groups when filtering.
 - [ ] Preserve drag-and-drop and click-to-add behavior; source nodes still trigger file import.
@@ -49,13 +73,13 @@ Expand RefineIt from the current M4 v1 library (14 node types) to a grouped, sea
 - [ ] RTL-safe layout; match UX spacing from [UX-guidelines.md](./UX-guidelines.md) left toolbar spec.
 - [ ] Update `tests/e2e/helpers.ts` if palette selectors change (aria-labels must remain stable).
 
-### 0.3 Documentation & schema
+### 0.3 Documentation & types
 
 - [ ] Bump `NodeType` union in `src/lib/types.ts` as new types land (per phase).
 - [ ] Update [03-domain-model.md](./03-domain-model.md) `NodeType` list when Phase 1 completes.
-- [ ] Add migration stub if renaming `output` → split write nodes (Phase 1 decision).
+- [ ] Implement [Persistence & compatibility policy](#persistence--compatibility-policy) (`IncompatibleDataDialog` + `clearAllLocalData`) before splitting `output` in Phase 1.
 
-**DoD:** Palette shows 12 collapsible groups; existing 14 nodes appear under correct groups; search works; all unit/E2E palette tests pass.
+**DoD:** Palette shows 12 collapsible groups; existing 14 nodes appear under correct groups; search works; incompatible local data surfaces clear-data dialog; all unit/E2E palette tests pass.
 
 ---
 
@@ -189,7 +213,7 @@ joined_3 = csv_data_1.merge(json_data_2, left_on="country", right_on="country", 
 | `combine` | Combine Operations | Join, union, merge |
 | `text` | Text Transformations | String ops and pattern extraction |
 | `datetime` | Date / Time | Part extraction and date arithmetic |
-| `quality` | Data Quality | Validation, profiling, outliers |
+| `quality` | Data Quality | Validation, outliers, duplicate detection |
 | `window` | Window Operations | Analytic/window functions |
 | `ai` | AI | LLM-assisted transforms (client API) |
 | `python` | Python Code | User-controlled code escape hatch |
@@ -221,14 +245,19 @@ joined_3 = csv_data_1.merge(json_data_2, left_on="country", right_on="country", 
 
 #### Split / expand output nodes
 
-- [ ] **Decision:** migrate monolithic `output` → three types `output.csv`, `output.json`, `output.parquet` **or** keep `output` with format enum. Recommended: **split** for clearer palette entries and simpler inspectors.
-- [ ] If split: write `schemaVersion` migration `output` → `output.csv` preserving config.
+- [ ] **Decision (confirmed):** split monolithic `output` → `output.csv`, `output.json`, `output.parquet` for clearer I/O palette entries and simpler inspectors.
+- [ ] Remove `output` from registry after split; bump `WORKFLOW_SCHEMA_VERSION` and treat saved workflows containing `output` as **incompatible** (clear-data dialog — no migration).
 - [ ] Write CSV: `inp.to_csv(...)` + browser download (existing behavior).
 - [ ] Write JSON: `inp.to_json(orient=...)` + download.
 - [ ] Write Parquet: `inp.to_parquet(...)` → bytes in worker → transfer buffer to main thread for download (only export path may transfer full bytes; document size warning >50 MB).
 - [ ] Register all three under `paletteGroup: 'io'`.
 
-**DoD:** User can ingest and export CSV, JSON, and Parquet in a pipeline; parquet load adds ≤ acceptable bundle weight (measure in Phase 1 spike).
+**DoD:** User can ingest and export CSV, JSON, and Parquet in a pipeline (parquet only if pyarrow gate passes).
+
+**Parquet spike (before full Phase 1):**
+
+- [ ] Lazy-load `pyarrow` in worker; record **added download size** after lazy load.
+- [ ] **Hard cap: ≥10 MB added** → defer `source.parquet` and `output.parquet`; ship CSV/JSON I/O only. Document measured size in plan/09-risks if rejected.
 
 ---
 
@@ -263,7 +292,9 @@ joined_3 = csv_data_1.merge(json_data_2, left_on="country", right_on="country", 
 - [ ] `compile`: `head(n)`, `tail(n)`, or `iloc[start:stop]`.
 - [ ] Validate: positive `n`; slice bounds sensible.
 
-**DoD:** Row group complete; each node has unit tests; combine in E2E: CSV → Filter → Sample → Limit → Output.
+**Schema propagation:** row count changes only; column list and dtypes unchanged — unit test `validate()` with upstream schemas.
+
+**DoD:** Row group complete; each node has unit tests; combine in heavy E2E: CSV → Filter → Sample → Limit → Write CSV.
 
 ---
 
@@ -303,6 +334,8 @@ joined_3 = csv_data_1.merge(json_data_2, left_on="country", right_on="country", 
 
 - [ ] Config: `columns: string[]`, `separator: string`, `into: string`, `dropSource: boolean`.
 - [ ] `compile`: `assign` + `str.cat` or `apply` with validated separator.
+
+**Schema propagation:** document added/removed/renamed columns and dtypes for each op; unit tests per node.
 
 **DoD:** Column group nodes implemented; expression nodes still use AST whitelist from [01-architecture.md](./01-architecture.md).
 
@@ -441,11 +474,12 @@ joined_3 = csv_data_1.merge(json_data_2, left_on="country", right_on="country", 
 
 ## Phase 9 — Data Quality (`quality`)
 
+Profiling stays on **node selection** (M3 profile panel) — **no `profile` palette node**.
+
 | Node | Type ID | Scope |
 |------|---------|-------|
 | Validate | `validate` | row-level rules: email, range, type, not-null, regex |
-| Profile | `profile` | pass-through + attach profile metadata to runtime store |
-| Detect Outliers | `outliers` | IQR, z-score, isolation optional |
+| Detect Outliers | `outliers` | IQR, z-score |
 | Find Duplicates | `find.duplicates` | flag or extract duplicate rows |
 
 ### Tasks
@@ -455,46 +489,56 @@ joined_3 = csv_data_1.merge(json_data_2, left_on="country", right_on="country", 
 - [ ] Config: `rules: { column, check, args }[]` — checks: `email`, `range`, `dtype`, `not_null`, `regex`, `unique`.
 - [ ] `compile`: add boolean `_valid` column or filter invalid (`mode: 'flag' | 'filter' | 'fail'`).
 - [ ] Fail mode: raise with row count summary (worker try/except → structured error).
-
-#### Profile (`profile`)
-
-- [ ] Mostly **runtime**: reuse M3 `profile_df()` on pass-through; no transform or identity `out = inp.copy()`.
-- [ ] Surface profile in side panel when this node selected (extend runtime-store).
-- [ ] Optional: write profile JSON as second output in future — v1 single output only.
+- [ ] Schema propagation: flag mode adds `_valid` bool column; filter mode may drop columns only indirectly.
 
 #### Detect Outliers (`outliers`)
 
 - [ ] Config: `columns: string[]`, `method: 'iqr' | 'zscore'`, `threshold`, `action: 'flag' | 'remove' | 'winsorize'`.
 - [ ] `compile`: vectorized bounds; no sklearn required for IQR/zscore.
+- [ ] Schema propagation: flag mode adds outlier column(s); remove mode reduces rows only.
 
 #### Find Duplicates (`find.duplicates`)
 
 - [ ] Config: `subset`, `keep: 'first' | 'last' | false`, `output: 'duplicates_only' | 'flag_column'`.
 - [ ] Related to `dedup` but **diagnostic** — keep both.
+- [ ] Schema propagation: flag mode adds duplicate indicator column.
 
-**DoD:** Validation node rejects bad emails in fixture CSV; profile node drives existing profile panel.
+**DoD:** Validation node rejects bad emails in fixture CSV; heavy E2E `quality.spec.ts` covers validate + outliers.
 
 ---
 
 ## Phase 10 — Window Operations (`window`)
 
+Split into **three nodes** (clearer inspectors than one mega-node).
+
 | Node | Type ID | Scope |
 |------|---------|-------|
-| Window | `window` | rolling/expanding + rank, row number, lag/lead |
+| Rolling / Expanding | `window.rolling` | rolling/expanding mean, sum, min, max, count |
+| Rank / Row Number | `window.rank` | rank, dense rank, row number within partitions |
+| Lag / Lead | `window.shift` | shift, lag, lead with partition + order |
 
 ### Tasks
 
-#### Unified Window node (`window`)
+#### Rolling / Expanding (`window.rolling`)
 
-- [ ] Config: `mode: 'rolling' | 'expanding' | 'rank' | 'row_number' | 'lag_lead'`.
-- [ ] Rolling/expanding: `column`, `window`, `agg: mean|sum|min|max|count`, `groupBy?: string[]`.
-- [ ] Rank: `method`, `ascending`, `partitionBy?: string[]`.
-- [ ] Row number: `partitionBy`, `orderBy`.
-- [ ] Lag/lead: `column`, `periods`, `partitionBy`, `orderBy`.
-- [ ] `compile`: `groupby(...).transform(...)`, `.rank()`, `.cumcount()`, `.shift()`.
-- [ ] Validate: partition/order columns exist; window size ≥ 1.
+- [ ] Config: `mode: 'rolling' | 'expanding'`, `column`, `window`, `agg: mean|sum|min|max|count`, `groupBy?: string[]`.
+- [ ] `compile`: `groupby(...).transform(...)` or `.rolling(...).agg(...)`.
+- [ ] Validate: window size ≥ 1; partition columns exist.
+- [ ] Schema propagation: adds numeric aggregate column(s) with documented names.
 
-**DoD:** Running total and moving average E2E on demo sales data; rank within group tested.
+#### Rank / Row Number (`window.rank`)
+
+- [ ] Config: `mode: 'rank' | 'row_number'`, `method?`, `ascending`, `partitionBy?: string[]`, `orderBy?: string[]`.
+- [ ] `compile`: `.rank(...)`, `.cumcount()` (+1 for 1-based row numbers).
+- [ ] Schema propagation: adds int rank/row_number column(s).
+
+#### Lag / Lead (`window.shift`)
+
+- [ ] Config: `column`, `periods` (negative = lag, positive = lead), `partitionBy?: string[]`, `orderBy?: string[]`.
+- [ ] `compile`: `groupby(...)[column].shift(periods)`.
+- [ ] Schema propagation: adds shifted column or overwrites with documented naming.
+
+**DoD:** Running total and moving average on demo sales data; rank within group tested; heavy E2E `window.spec.ts`.
 
 ---
 
@@ -506,34 +550,11 @@ joined_3 = csv_data_1.merge(json_data_2, left_on="country", right_on="country", 
 | Summarize | `ai.summarize` | Aggregate text or dataset summary |
 | Anonymize | `ai.anonymize` | PII redaction / pseudonymization |
 
-> **Constraint:** RefineIt is client-side-first. AI nodes require an **explicit user-provided API key** and direct browser calls to a provider (OpenAI-compatible or local WebLLM). No RefineIt backend. Offline mode: nodes disabled with clear messaging.
+> **Constraint:** Client-side only — user API key, direct browser calls to OpenAI-compatible or WebLLM endpoint. No RefineIt backend. Feature-flagged until privacy review.
 
-### Tasks
+**Implementation tasks:** see dedicated checklist [`tasks/post-M4-ai-phase.md`](../tasks/post-M4-ai-phase.md) (settings, AI client, worker boundary, three nodes, codegen redaction, privacy gate).
 
-#### Shared AI infrastructure
-
-- [ ] Settings UI: API key storage (session or IndexedDB encrypted — document security tradeoff).
-- [ ] Rate limiting and batch size caps (preview-only subsets by default, e.g. first 100 rows).
-- [ ] Worker boundary: **option A** — LLM calls on main thread, pass results to worker as column data; **option B** — fetch in worker via `fetch` in Pyodide. Prefer **main thread** to keep keys out of worker logs.
-- [ ] Redact API keys from codegen export and shared URLs.
-
-#### Classify (`ai.classify`)
-
-- [ ] Config: `column`, `labels: string[] | 'auto'`, `promptTemplate?`.
-- [ ] Output: new column `{col}_class`.
-- [ ] Batch prompt construction with row limit.
-
-#### Summarize (`ai.summarize`)
-
-- [ ] Config: `scope: 'column' | 'dataset'`, `column?`, `maxTokens`.
-- [ ] Output: single-row summary DataFrame or side-panel markdown (configurable).
-
-#### Anonymize (`ai.anonymize`)
-
-- [ ] Config: `columns`, `method: 'mask' | 'hash' | 'llm_rewrite'`, `preserveFormat: boolean`.
-- [ ] Prefer deterministic mask/hash without LLM by default; LLM rewrite optional.
-
-**DoD:** With user API key, classify 50 rows on sample data; without key, validation error before run. Feature flagged until privacy review complete.
+**DoD:** See post-M4 AI task file — flag off by default; with key, classify 50 rows in manual QA.
 
 ---
 
@@ -564,9 +585,22 @@ joined_3 = csv_data_1.merge(json_data_2, left_on="country", right_on="country", 
 
 ## Cross-cutting tasks (all phases)
 
+### Schema propagation (required per new node)
+
+Downstream column pickers use `preview.columns` from executed upstream nodes (`getUpstreamSchemas` / `resolveUpstreamSchemasForValidation`). Every new node must document how output schema differs from input.
+
+**Checklist (copy into each phase DoD):**
+
+- [ ] **Runtime preview:** after execution, worker preview JSON reflects new/removed/renamed columns and dtypes.
+- [ ] **Validate with schemas:** `validate(config, upstreamSchemas)` rejects references to columns not in upstream schemas (when schemas are available).
+- [ ] **Static peek (sources):** source nodes continue CSV header peek where applicable.
+- [ ] **Optional:** `inferOutputSchema(config, upstreamSchemas): ColumnSchema[]` on `NodeDefinition` for pre-run inspector hints (add to contract when first node needs it).
+- [ ] **Unit test:** `validate()` with mock `upstreamSchemas` — valid config passes, bad column names fail.
+- [ ] **Integration test:** small pipeline through node → preview columns match expectation (browser mode when Pyodide involved).
+
 ### Inspector & schema propagation
 
-- [ ] Extend `ColumnSchema` dtype inference for new ops (datetime after parse, categorical after cut).
+- [ ] Extend `ColumnSchema` dtype inference for new ops (datetime after parse, string after text ops).
 - [ ] New inspector field kinds as needed: `regex`, `rule-list`, `operation-list`, `code`.
 - [ ] `configSummary()` one-liner for each new node for canvas card body.
 
@@ -582,11 +616,16 @@ joined_3 = csv_data_1.merge(json_data_2, left_on="country", right_on="country", 
 - [ ] Notebook + script export handles new types (M7).
 - [ ] AI and custom python sections include compliance comments.
 
+### Local data lifecycle
+
+- [ ] [Persistence & compatibility policy](#persistence--compatibility-policy) — no migration chain; clear-data dialog + manual clear in Settings/About.
+- [ ] On `WORKFLOW_SCHEMA_VERSION` bump: document in changelog / About that old local saves and share links may require rebuild.
+
 ### Testing ([10-testing.md](./10-testing.md))
 
 - [ ] Unit: every node `compile()` + `validate()` in `tests/unit/nodes/`.
-- [ ] Browser integration: parquet load, window ops (Pyodide).
-- [ ] E2E: one happy path per palette group (stretch goal in M9).
+- [ ] Browser integration: parquet load (if gate passed), window ops (Pyodide).
+- [ ] **Heavy E2E (on-demand):** one happy path per post-M4 phase — **not** CI default; see [10-testing.md](./10-testing.md) § Heavy E2E suite.
 
 ### Pyodide packages (cumulative)
 
@@ -601,23 +640,23 @@ joined_3 = csv_data_1.merge(json_data_2, left_on="country", right_on="country", 
 
 ## Suggested delivery order
 
-Align with post-M4 milestones; do not block M5–M8 on later phases.
+Align with post-M4 work; do not block M5–M8 on later phases.
 
 ```
-Phase 0   Palette groups          (M4 polish / M9 UX)
-Phase 0b  Readable export codegen   (M7 polish — can ship early)
-Phase 1   I/O + parquet             (M4 extension)
-Phase 2  Row ops                  (M4 extension)
-Phase 3  Column ops               (M4 extension)
-Phase 4  Missing / impute         (M4 extension)
-Phase 5  Aggregations             (was "phase 2" in 05-node-library.md)
-Phase 6  Combine / merge update   (M4 extension)
-Phase 7  Text                       (M9)
-Phase 8  Date/time                  (M9)
-Phase 9  Data quality               (M9 + M3 profile reuse)
-Phase 10 Window                     (M9)
-Phase 11 AI                         (post-M9, feature-flagged)
-Phase 12 Custom Python              (post-M9, gated)
+Phase 0   Palette groups              (post-M4 / M9 UX)
+Phase 0b  Readable export codegen     (M7 polish — can ship early)
+Phase 1   I/O + parquet               (post-M4)
+Phase 2   Row ops                     (post-M4)
+Phase 3   Column ops                  (post-M4)
+Phase 4   Missing / impute            (post-M4)
+Phase 5   Aggregations                (post-M4)
+Phase 6   Combine / merge update      (post-M4)
+Phase 7   Text                        (post-M4 / M9)
+Phase 8   Date/time                   (post-M4 / M9)
+Phase 9   Data quality                (post-M4 / M9)
+Phase 10  Window (split nodes)        (post-M4 / M9)
+Phase 11  AI                          (post-M9, feature-flagged — [tasks/post-M4-ai-phase.md](../tasks/post-M4-ai-phase.md))
+Phase 12  Custom Python               (post-M9, gated)
 ```
 
 Phases 1–6 complete the "visual ETL" story. Phases 7–10 deepen analytics. Phases 11–12 are optional power features with explicit security and privacy gates.
@@ -626,23 +665,51 @@ Phases 1–6 complete the "visual ETL" story. Phases 7–10 deepen analytics. Ph
 
 ## Open decisions
 
-| # | Question | Recommendation |
-|---|----------|----------------|
-| 1 | Split `output` into three type IDs? | Yes — clearer I/O group |
-| 2 | `drop` vs `select` drop mode | Keep both; hide duplicate in palette via `hiddenInPalette` flag if needed |
+| # | Question | Status / recommendation |
+|---|----------|-------------------------|
+| 1 | Split `output` into three type IDs? | **Confirmed** — split; no migration (incompatible → clear local data) |
+| 2 | `drop` vs `select` drop mode | Keep both; hide `select` drop mode via `hiddenInPalette` on registry |
 | 3 | sklearn for impute | Start pandas-only; add sklearn only if median/mode grouped impute insufficient |
 | 4 | AI provider | User-selectable OpenAI-compatible endpoint; no default cloud |
-| 5 | Merge vs Join | Join = relational; Merge = upsert/update (separate type IDs) |
-| 6 | Export comment Node ID | 1-based topo step (human-readable); omit raw canvas UUID from export by default |
+| 5 | Merge vs Join | Join = relational; `merge.update` = upsert/update (separate type IDs) |
+| 6 | Export comment Node ID | **Confirmed** — 1-based topo step; omit raw canvas UUID from export by default |
 | 7 | User title in var name | Prefer title slug when set; fall back to type default slug |
+| 8 | pyarrow bundle gate | **Confirmed** — hard cap **≥10 MB** lazy-load added size → defer parquet nodes |
+| 9 | Empty palette groups | **Confirmed** — show all 12; empty groups visible with 0 count (collapsed default) |
+| 10 | Workflow migrations | **Confirmed** — none; scan all IndexedDB workflows; reject + clear local data / reject share import |
+| 11 | `split.column` vs `str.split` | Phase 3 = column reshape (`split.column`); Phase 7 = text ops (`str.split` with explode); distinct labels |
+| 12 | Profile palette node | **Confirmed dropped** — profiling on node selection only (M3) |
+| 13 | Window nodes | **Confirmed split** — `window.rolling`, `window.rank`, `window.shift` |
+| 14 | E2E in CI | **Confirmed** — heavy E2E on-demand only; CI runs unit + build |
+
+### Resolved node inventory (target **40** types)
+
+| Group | Planned types | Notes |
+|-------|---------------|-------|
+| `io` | 6 | 2 sources + 3 writes + parquet read (if gate passes) |
+| `row` | 5 | filter, sample, sort, dedup, limit |
+| `column` | 8 | includes split.column, merge.columns |
+| `missing` | 3 | fillna, dropna, impute |
+| `aggregate` | 3 | groupby, pivot, melt |
+| `combine` | 3 | join, concat, merge.update |
+| `text` | 3 | str.transform, str.extract, str.split |
+| `datetime` | 2 | dt.extract, dt.calc |
+| `quality` | 3 | validate, outliers, find.duplicates (no profile node) |
+| `window` | 3 | window.rolling, window.rank, window.shift |
+| `ai` | 3 | feature-flagged |
+| `python` | 1 | feature-flagged |
+| **Total** | **40** | 14 implemented + 26 new (−1 `output`, +3 write splits, +1 parquet read, −1 profile, +2 window split) |
 
 ---
 
 ## Success metrics
 
-- All palette groups render collapsed/expanded with search.
+- All 12 palette groups render (including empty groups) with collapse state + search.
 - Exported Python uses semantic variable names (`json_data_1`, `joined_2`) and sequential `# Node ID:` comments — no `node_<uuid>` in download/export views.
-- ≥ 45 registered node types across groups a–j (k–l feature-flagged).
-- `npm run lint && npm run typecheck && npm run test:unit && npm run build` pass.
+- **40** registered node types when phases 1–12 complete (phases 11–12 behind feature flags).
+- `npm run lint && npm run typecheck && npm run test:unit && npm run build` pass in CI.
+- Heavy E2E suite documented and runnable on-demand (`npm run test:e2e`).
 - No full DataFrame transfers to main thread except explicit export download path.
-- Shared workflows migrate forward without silent node drops.
+- Boot scans **all** IndexedDB workflows; incompatible data shows explicit error — never silent node drops or partial loads.
+- **Clear all local data** restores a working empty app without manual DevTools steps.
+- Share links may break after schema bumps — explicit reject message, no migration.

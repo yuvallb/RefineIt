@@ -39,7 +39,7 @@ M2 is the **critical path** — prioritize end-to-end pipeline correctness over 
 - **Workflow ≠ data** — shared URLs and exports contain logic + params only.
 - **Preview cap** — max 100 rows cross the worker boundary.
 - **GitHub Pages** — Vite `base: '/RefineIt/'`.
-- **Deferred features** — Excel, dbt/SQL, custom Python node, Arrow IPC (see [`plan/README.md`](../plan/README.md)).
+- **Deferred features** — Excel, dbt/SQL, Arrow IPC (see [`plan/README.md`](../plan/README.md)). Custom Python and AI nodes are post-M9 only.
 
 ## Verification commands (from M0 onward)
 
@@ -48,7 +48,7 @@ npm run lint
 npm run typecheck
 npm run test:unit        # when tests exist
 npm run test:integration # from M1 (Vitest Browser Mode)
-npm run test:e2e         # from M2
+npm run test:e2e         # on-demand heavy suite (not CI default)
 npm run build
 ```
 
@@ -64,4 +64,13 @@ npm run build
 | Feature specs | [`plan/06-features.md`](../plan/06-features.md) |
 | Repo layout | [`plan/08-repo-structure.md`](../plan/08-repo-structure.md) |
 | Testing strategy | [`plan/10-testing.md`](../plan/10-testing.md) |
+| Post-M4 node expansion | [`plan/12-node-expansion.md`](../plan/12-node-expansion.md) |
+| Post-M4 AI phase | [`post-M4-ai-phase.md`](./post-M4-ai-phase.md) |
 | UX layout | [`plan/UX-guidelines.md`](../plan/UX-guidelines.md) |
+
+## Post-M4 tracks (after M9 DoD)
+
+| Track | Document | Goal |
+|-------|----------|------|
+| Node expansion | [plan/12-node-expansion.md](../plan/12-node-expansion.md) | Grouped palette + ~40 node types |
+| AI nodes | [post-M4-ai-phase.md](./post-M4-ai-phase.md) | LLM classify/summarize/anonymize (feature-flagged) |

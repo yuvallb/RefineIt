@@ -56,9 +56,9 @@
 |---|---|
 | **Risk** | Changing the workflow schema invalidates saved workflows and shared URLs |
 | **Likelihood** | Certain over time |
-| **Impact** | High — data loss for users |
-| **Mitigation** | `schemaVersion` field from day one. Migration functions (`v1 → v2 → ...`). Test migrations in CI. |
-| **Verification** | Unit test: load a v1 workflow JSON through migration chain → valid current workflow |
+| **Impact** | High — local saves and old share links stop loading |
+| **Mitigation** | `schemaVersion` for reject-forward checks. **No migration chains** — on incompatible IndexedDB (scan **all** workflows on boot), show blocking dialog with **Clear all local data**. Share import / old URLs: explicit error, user rebuilds. Document breaking changes in About/changelog. |
+| **Verification** | Unit test: IndexedDB with unknown node type or stale `schemaVersion` → incompatible dialog; clear → empty app. Share import of old workflow → structured error (no partial load). |
 
 ## R7: Expression injection in Filter/Derive nodes
 
@@ -67,7 +67,7 @@
 | **Risk** | User-supplied expressions passed to Python `eval()` could execute arbitrary code |
 | **Likelihood** | Low in v1 (no custom Python node), but Filter/Derive use expressions |
 | **Impact** | Medium — Pyodide sandbox limits damage, but still undesirable |
-| **Mitigation** | Use Pandas `df.query()` or `df.eval()` with restricted scope (only column names + params). Do not use bare `exec()`. Custom Python node deferred. |
+| **Mitigation** | Use Pandas `df.query()` or `df.eval()` with restricted scope (only column names + params). Do not use bare `exec()`. Custom Python node is post-M9 only ([12-node-expansion.md](./12-node-expansion.md) Phase 12) with AST whitelist. |
 | **Verification** | Test that expressions with `import os` or `__import__` are rejected |
 
 ## R8: IndexedDB storage limits

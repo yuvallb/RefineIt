@@ -22,7 +22,7 @@ This folder contains the architecture and implementation plan for building **Ref
 
 - Excel import (openpyxl adds bundle weight)
 - dbt/SQL export (lossy from Pandas; best-effort only)
-- Custom Python node (escape hatch)
+- Custom Python node — post-M9; see [12-node-expansion.md](./12-node-expansion.md) Phase 12
 - >100 MB datasets (Arrow IPC + chunking)
 
 ## Documents
@@ -40,7 +40,9 @@ This folder contains the architecture and implementation plan for building **Ref
 | [09-risks-and-mitigations.md](./09-risks-and-mitigations.md) | Technical risks |
 | [10-testing.md](./10-testing.md) | Test strategy |
 | [11-branding-and-product-surface.md](./11-branding-and-product-surface.md) | Logo, tagline, About dialog, GitHub links, SEO |
-| [12-node-expansion.md](./12-node-expansion.md) | Grouped palette + expanded node types (phases 0–12) |
+| [12-node-expansion.md](./12-node-expansion.md) | Grouped palette + expanded node types (post-M4 phases 0–12) |
+
+Post-M4 implementation tasks: [tasks/post-M4-ai-phase.md](../tasks/post-M4-ai-phase.md) (AI nodes).
 
 ## One-sentence summary
 
