@@ -16,7 +16,7 @@ import type { Workflow } from '@/lib/types';
 const sampleWorkflow = (): Workflow => ({
   id: 'wf-1',
   name: 'Test Pipeline',
-  schemaVersion: 1,
+  schemaVersion: 2,
   nodes: [
     {
       id: 'n1',

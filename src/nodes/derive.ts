@@ -12,6 +12,9 @@ export const derive: NodeDefinition = {
   type: 'derive',
   label: 'Derive',
   category: 'transform',
+  paletteGroup: 'column',
+  paletteOrder: 2,
+  exportVarSlug: 'derived',
   inputs: [{ id: 'input', label: 'Input' }],
   outputs: 1,
 

@@ -4,6 +4,7 @@ import { FileDropzone } from '@/ui/FileDropzone';
 import { Inspector } from '@/ui/Inspector';
 import { PreviewGrid } from '@/ui/PreviewGrid';
 import { ProfilePanel } from '@/ui/ProfilePanel';
+import { IncompatibleDataDialog } from '@/ui/IncompatibleDataDialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/components/ui/tabs';
 
 import { FileImportProvider } from '@/hooks/useFileImport';
@@ -84,6 +85,7 @@ function Workspace() {
       </div>
       <Footer />
       <Toaster />
+      <IncompatibleDataDialog />
     </div>
   );
 }

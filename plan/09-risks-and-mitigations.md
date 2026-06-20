@@ -119,7 +119,16 @@
 | **Mitigation** | Implement dataset deduplication via content hashing (store the same file once) and a pruning/retention policy for old version snapshots. Use `navigator.storage.estimate()` to show storage usage and warn before limits are hit. |
 | **Verification** | Import 5 × 50 MB files; verify storage usage is reported correctly and pruning triggers when nearing limits. |
 
-## Risk priority matrix
+## R13: Pyodide pyarrow bundle size (Parquet I/O)
+
+| | |
+|---|---|
+| **Risk** | Lazy-loading `pyarrow` in Pyodide adds ~15 MB download — exceeds the 10 MB gate in [12-node-expansion.md](./12-node-expansion.md) |
+| **Likelihood** | High (measured ~15 MB for pyarrow wheel in Pyodide CDN builds) |
+| **Impact** | Medium — slower first Parquet use, larger cache |
+| **Mitigation** | `PARQUET_ENABLED = false` in `src/lib/constants.ts`; `source.parquet` / `output.parquet` hidden from palette until re-evaluated. CSV/JSON I/O ships without pyarrow. |
+| **Verification** | Confirm palette shows Write CSV/JSON only; enabling flag requires explicit product decision + size re-measurement |
+
 
 ```
 Impact

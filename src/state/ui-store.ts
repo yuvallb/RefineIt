@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 
+import type { PaletteGroup } from '@/nodes/types';
 import type { Workflow, WorkflowDiff } from '@/lib/types';
 
 export type CodeViewMode = 'node' | 'pipeline';
@@ -28,6 +29,8 @@ interface UiState {
   versionOpenSaveOnMount: boolean;
   helpDialogOpen: boolean;
   aboutDialogOpen: boolean;
+  incompatibleDataDialogOpen: boolean;
+  paletteCollapseState: Partial<Record<PaletteGroup, boolean>>;
 
   setBottomPanelOpen: (open: boolean) => void;
   setCodeViewMode: (mode: CodeViewMode) => void;
@@ -43,6 +46,8 @@ interface UiState {
   setVersionOpenSaveOnMount: (open: boolean) => void;
   setHelpDialogOpen: (open: boolean) => void;
   setAboutDialogOpen: (open: boolean) => void;
+  setIncompatibleDataDialogOpen: (open: boolean) => void;
+  setPaletteGroupCollapsed: (group: PaletteGroup, collapsed: boolean) => void;
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -60,6 +65,8 @@ export const useUiStore = create<UiState>((set) => ({
   versionOpenSaveOnMount: false,
   helpDialogOpen: false,
   aboutDialogOpen: false,
+  incompatibleDataDialogOpen: false,
+  paletteCollapseState: {},
 
   setBottomPanelOpen(open) {
     set({ bottomPanelOpen: open });
@@ -115,5 +122,15 @@ export const useUiStore = create<UiState>((set) => ({
 
   setAboutDialogOpen(open) {
     set({ aboutDialogOpen: open });
+  },
+
+  setIncompatibleDataDialogOpen(open) {
+    set({ incompatibleDataDialogOpen: open });
+  },
+
+  setPaletteGroupCollapsed(group, collapsed) {
+    set((state) => ({
+      paletteCollapseState: { ...state.paletteCollapseState, [group]: collapsed },
+    }));
   },
 }));

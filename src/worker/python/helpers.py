@@ -174,3 +174,94 @@ def validate_expression(expr):
         return {"valid": False, "error": f"Disallowed syntax: {node_type.__name__}"}
 
     return {"valid": True}
+
+
+def validate_custom_python(code):
+    import ast
+
+    if not isinstance(code, str) or not code.strip():
+        return {"valid": False, "error": "Code is empty"}
+
+    try:
+        tree = ast.parse(code.strip(), mode="exec")
+    except SyntaxError as exc:
+        return {"valid": False, "error": str(exc)}
+
+    for node in ast.walk(tree):
+        node_type = type(node)
+
+        if node_type in (
+            ast.Module,
+            ast.Assign,
+            ast.AugAssign,
+            ast.Expr,
+            ast.Name,
+            ast.Load,
+            ast.Store,
+            ast.Constant,
+            ast.Subscript,
+            ast.Attribute,
+            ast.BinOp,
+            ast.UnaryOp,
+            ast.Compare,
+            ast.BoolOp,
+            ast.If,
+            ast.For,
+            ast.While,
+            ast.Pass,
+            ast.Break,
+            ast.Continue,
+            ast.Tuple,
+            ast.List,
+            ast.Dict,
+            ast.Slice,
+            ast.And,
+            ast.Or,
+            ast.Add,
+            ast.Sub,
+            ast.Mult,
+            ast.Div,
+            ast.Mod,
+            ast.Pow,
+            ast.Eq,
+            ast.NotEq,
+            ast.Lt,
+            ast.LtE,
+            ast.Gt,
+            ast.GtE,
+            ast.Is,
+            ast.IsNot,
+            ast.In,
+            ast.NotIn,
+            ast.USub,
+            ast.UAdd,
+            ast.Not,
+        ):
+            if node_type is ast.Attribute and node.attr.startswith("_"):
+                return {"valid": False, "error": f"Attribute '{node.attr}' not allowed"}
+            continue
+
+        if node_type is ast.Call:
+            if isinstance(node.func, ast.Attribute):
+                continue
+            if isinstance(node.func, ast.Name):
+                continue
+            return {"valid": False, "error": "Disallowed call expression"}
+
+        if node_type in (
+            ast.Import,
+            ast.ImportFrom,
+            ast.Lambda,
+            ast.FunctionDef,
+            ast.ClassDef,
+            ast.With,
+            ast.Try,
+            ast.Raise,
+            ast.Global,
+            ast.Nonlocal,
+        ):
+            return {"valid": False, "error": f"Disallowed syntax: {node_type.__name__}"}
+
+        return {"valid": False, "error": f"Disallowed syntax: {node_type.__name__}"}
+
+    return {"valid": True}

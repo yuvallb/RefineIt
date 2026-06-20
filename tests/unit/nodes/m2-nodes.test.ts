@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { filter } from '@/nodes/filter';
 import { groupby } from '@/nodes/groupby';
-import { output, replaceFilenameExtension } from '@/nodes/output';
+import { outputCsv } from '@/nodes/output-csv';
+import { replaceFilenameExtension } from '@/nodes/output-utils';
 import { sourceCsv } from '@/nodes/source-csv';
 import { isExpressionSafe } from '@/nodes/filter';
 
@@ -95,7 +96,7 @@ describe('groupby', () => {
   });
 });
 
-describe('output', () => {
+describe('output.csv', () => {
   it('replaces filename extension when format changes', () => {
     expect(replaceFilenameExtension('pipeline_output.csv', 'json')).toBe('pipeline_output.json');
     expect(replaceFilenameExtension('pipeline_output.json', 'csv')).toBe('pipeline_output.csv');
@@ -104,8 +105,8 @@ describe('output', () => {
   });
 
   it('passes through in execution mode', () => {
-    const code = output.compile(
-      { format: 'csv', filename: 'out.csv' },
+    const code = outputCsv.compile(
+      { filename: 'out.csv' },
       ['node_a'],
       'node_b',
       {},
@@ -115,8 +116,8 @@ describe('output', () => {
   });
 
   it('includes to_csv in export mode', () => {
-    const code = output.compile(
-      { format: 'csv', filename: 'out.csv' },
+    const code = outputCsv.compile(
+      { filename: 'out.csv' },
       ['node_a'],
       'node_b',
       {},

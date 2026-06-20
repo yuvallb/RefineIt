@@ -6,7 +6,7 @@ import type { Workflow } from '@/lib/types';
 const workflow: Workflow = {
   id: 'wf1',
   name: 'Test',
-  schemaVersion: 1,
+  schemaVersion: 2,
   createdAt: '2026-01-01T00:00:00Z',
   updatedAt: '2026-01-01T00:00:00Z',
   params: [],
@@ -34,9 +34,9 @@ const workflow: Workflow = {
     },
     {
       id: 'out',
-      type: 'output',
+      type: 'output.csv',
       position: { x: 0, y: 0 },
-      config: { format: 'csv', filename: 'output.csv' },
+      config: { filename: 'output.csv' },
     },
   ],
   edges: [
@@ -64,6 +64,17 @@ describe('generatePipelineCode', () => {
     expect(srcIdx).toBeLessThan(filterIdx);
     expect(filterIdx).toBeLessThan(groupIdx);
     expect(groupIdx).toBeLessThan(outIdx);
+  });
+
+  it('uses readable export variable names and sequential step comments', () => {
+    const code = generatePipelineCode(workflow);
+
+    expect(code).toContain('# Node ID: 1');
+    expect(code).toContain('# Node ID: 4');
+    expect(code).toContain('csv_data_1 = pd.read_csv');
+    expect(code).toContain('filtered_2 = csv_data_1');
+    expect(code).toContain('grouped_3 = filtered_2.groupby');
+    expect(code).toContain('csv_output_4 = grouped_3');
   });
 
   it('includes params dict when workflow has parameters', () => {

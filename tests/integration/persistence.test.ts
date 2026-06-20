@@ -11,7 +11,7 @@ import type { Workflow } from '@/lib/types';
 const workflow: Workflow = {
   id: 'persist-wf',
   name: 'Persist test',
-  schemaVersion: 1,
+  schemaVersion: 2,
   nodes: [
     {
       id: 'src-1',
@@ -40,7 +40,7 @@ describe('persistence integration', () => {
       workflow: {
         id: 'default',
         name: 'Untitled Pipeline',
-        schemaVersion: 1,
+        schemaVersion: 2,
         nodes: [],
         edges: [],
         params: [],

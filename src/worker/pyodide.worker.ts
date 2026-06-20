@@ -141,11 +141,17 @@ const kernelApi = {
     }
   },
 
-  async exportNodeOutput(nodeId: string, format: 'csv' | 'json'): Promise<ExportNodeResult> {
+  async exportNodeOutput(nodeId: string, format: 'csv' | 'json' | 'parquet'): Promise<ExportNodeResult> {
     try {
       const api = await ensureInit();
+      if (format === 'parquet') {
+        await api.loadPackage('pyarrow');
+      }
       const data = exportNodeOutput(api, nodeId, format);
-      return { data };
+      if (format === 'parquet' && data instanceof Uint8Array) {
+        return { data };
+      }
+      return { data: data as string };
     } catch (err) {
       return { error: parsePythonException(err, nodeId) };
     }
@@ -165,6 +171,17 @@ const kernelApi = {
     try {
       const api = await ensureInit();
       const result = api.runPython(`validate_expression(${JSON.stringify(expr)})`);
+      const parsed = toSerializable(result) as ExpressionValidationResult;
+      return parsed;
+    } catch (err) {
+      return { valid: false, error: parsePythonException(err).message };
+    }
+  },
+
+  async validateCustomPython(code: string): Promise<ExpressionValidationResult> {
+    try {
+      const api = await ensureInit();
+      const result = api.runPython(`validate_custom_python(${JSON.stringify(code)})`);
       const parsed = toSerializable(result) as ExpressionValidationResult;
       return parsed;
     } catch (err) {

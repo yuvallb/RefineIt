@@ -60,6 +60,7 @@ export interface LoadCsvResult {
 export type NodeType =
   | 'source.csv'
   | 'source.json'
+  | 'source.parquet'
   | 'filter'
   | 'select'
   | 'rename'
@@ -71,7 +72,35 @@ export type NodeType =
   | 'fillna'
   | 'dropna'
   | 'cast'
-  | 'output';
+  | 'output.csv'
+  | 'output.json'
+  | 'output.parquet'
+  | 'sample'
+  | 'dedup'
+  | 'limit'
+  | 'reorder'
+  | 'drop'
+  | 'split.column'
+  | 'merge.columns'
+  | 'impute'
+  | 'pivot'
+  | 'melt'
+  | 'merge.update'
+  | 'str.transform'
+  | 'str.extract'
+  | 'str.split'
+  | 'dt.extract'
+  | 'dt.calc'
+  | 'validate'
+  | 'outliers'
+  | 'find.duplicates'
+  | 'window.rolling'
+  | 'window.rank'
+  | 'window.shift'
+  | 'ai.classify'
+  | 'ai.summarize'
+  | 'ai.anonymize'
+  | 'custom.python';
 
 export interface WorkflowNode {
   id: string;
@@ -169,6 +198,7 @@ export interface PipelineNodeRequest {
   csvBytes?: Uint8Array;
   csvOptions?: LoadCsvOptions;
   jsonBytes?: Uint8Array;
+  parquetBytes?: Uint8Array;
 }
 
 export interface ProfileNodeResult {
@@ -177,7 +207,7 @@ export interface ProfileNodeResult {
 }
 
 export interface ExportNodeResult {
-  data?: string;
+  data?: string | Uint8Array;
   error?: StructuredError;
 }
 

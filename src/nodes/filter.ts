@@ -14,6 +14,9 @@ export const filter: NodeDefinition = {
   type: 'filter',
   label: 'Filter',
   category: 'transform',
+  paletteGroup: 'row',
+  paletteOrder: 0,
+  exportVarSlug: 'filtered',
   inputs: [{ id: 'input', label: 'Input' }],
   outputs: 1,
 
@@ -51,7 +54,7 @@ export const filter: NodeDefinition = {
     return errors;
   },
 
-  compile(config, inputVars, outputVar, _params, _context) {
+  compile(config, inputVars, outputVar, _params?, _context?) {
     void _params;
     void _context;
     const raw = typeof config.expression === 'string' ? config.expression.trim() : '';

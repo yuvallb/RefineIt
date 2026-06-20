@@ -7,7 +7,7 @@ function workflow(overrides: Partial<Workflow> = {}): Workflow {
   return {
     id: 'wf-1',
     name: 'Test',
-    schemaVersion: 1,
+    schemaVersion: 2,
     nodes: [],
     edges: [],
     params: [],

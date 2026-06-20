@@ -33,7 +33,7 @@ vi.mock('@/lib/load-demo', () => ({
 const sampleWorkflow = (overrides: Partial<Workflow> = {}): Workflow => ({
   id: 'wf-current',
   name: 'Current Pipeline',
-  schemaVersion: 1,
+  schemaVersion: 2,
   nodes: [],
   edges: [],
   params: [],
@@ -112,7 +112,7 @@ describe('WorkflowSwitcher', () => {
     const other = sampleRecord({
       id: 'wf-other',
       name: 'Other Pipeline',
-      nodes: [{ id: 'n2', type: 'output', position: { x: 0, y: 0 }, config: {} }],
+      nodes: [{ id: 'n2', type: 'output.csv', position: { x: 0, y: 0 }, config: {} }],
     });
     vi.mocked(listWorkflows).mockResolvedValue([other]);
 

@@ -6,7 +6,7 @@ import { deserializeWorkflow, serializeWorkflow } from '@/sharing/serialize';
 const sampleWorkflow = (): Workflow => ({
   id: 'wf-local',
   name: 'Revenue Pipeline',
-  schemaVersion: 1,
+  schemaVersion: 2,
   nodes: [
     {
       id: 'src-1',
@@ -82,7 +82,7 @@ describe('serializeWorkflow', () => {
 
   it('rejects unknown node types', () => {
     const payload = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: 'Malicious',
       nodes: [{ id: 'n1', type: 'evil.node', position: { x: 0, y: 0 }, config: {} }],
       edges: [],
@@ -94,7 +94,7 @@ describe('serializeWorkflow', () => {
 
   it('rejects malicious node ids on import to prevent code injection', () => {
     const payload = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: 'Injected',
       nodes: [
         {
@@ -113,11 +113,11 @@ describe('serializeWorkflow', () => {
 
   it('rejects duplicate node ids on import', () => {
     const payload = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: 'Duplicate',
       nodes: [
         { id: 'dup', type: 'filter', position: { x: 0, y: 0 }, config: { expression: 'x > 0' } },
-        { id: 'dup', type: 'output', position: { x: 100, y: 0 }, config: {} },
+        { id: 'dup', type: 'output.csv', position: { x: 100, y: 0 }, config: {} },
       ],
       edges: [],
       params: [],

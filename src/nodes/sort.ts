@@ -13,6 +13,9 @@ export const sort: NodeDefinition = {
   type: 'sort',
   label: 'Sort',
   category: 'transform',
+  paletteGroup: 'row',
+  paletteOrder: 1,
+  exportVarSlug: 'sorted',
   inputs: [{ id: 'input', label: 'Input' }],
   outputs: 1,
 
@@ -33,7 +36,9 @@ export const sort: NodeDefinition = {
     return errors;
   },
 
-  compile(config, inputVars, outputVar) {
+  compile(config, inputVars, outputVar, _params?, _context?) {
+    void _params;
+    void _context;
     const columns = parseStringArray(config.columns);
     const input = inputVars[0];
     const ascending = parseAscending(config, columns.length);

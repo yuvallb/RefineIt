@@ -1,6 +1,7 @@
 import { getNodeDefinition } from '@/nodes/registry';
 import type { NodeDefinition } from '@/nodes/types';
 
+import { buildExportNameMap } from '@/engine/export-names';
 import type { Workflow, WorkflowNode } from '@/lib/types';
 import { paramsToRecord, sanitizeCommentLine } from '@/lib/utils';
 
@@ -29,9 +30,14 @@ export function getSetupLines(workflow: PipelineWorkflow): string[] {
   return lines;
 }
 
-export function getNodeCommentLines(node: WorkflowNode, def: NodeDefinition): string[] {
+export function getNodeCommentLines(
+  node: WorkflowNode,
+  def: NodeDefinition,
+  step?: number,
+): string[] {
   const titleSuffix = node.title ? `: ${sanitizeCommentLine(node.title)}` : '';
-  const lines = [`# ${def.label}${titleSuffix}`, `# Node ID: ${node.id}`, `# Type: ${node.type}`];
+  const commentId = step ?? node.id;
+  const lines = [`# ${def.label}${titleSuffix}`, `# Node ID: ${commentId}`, `# Type: ${node.type}`];
 
   if (def.category === 'source') {
     const summary = sanitizeCommentLine(def.configSummary(node.config));
@@ -41,12 +47,17 @@ export function getNodeCommentLines(node: WorkflowNode, def: NodeDefinition): st
   return lines;
 }
 
-export function getNodeMarkdown(node: WorkflowNode, def: NodeDefinition): string {
+export function getNodeMarkdown(
+  node: WorkflowNode,
+  def: NodeDefinition,
+  step?: number,
+): string {
   const titleSuffix = node.title ? `: ${sanitizeCommentLine(node.title)}` : '';
+  const stepLabel = step ?? node.id;
   const lines = [
-    `## ${def.label}${titleSuffix}`,
+    `## Step ${stepLabel}: ${def.label}${titleSuffix}`,
     '',
-    `Node ID: \`${node.id}\``,
+    `Node ID: ${stepLabel}`,
     `Type: \`${node.type}\``,
   ];
 
@@ -62,24 +73,47 @@ export function getNodeMarkdown(node: WorkflowNode, def: NodeDefinition): string
   return lines.join('\n');
 }
 
+function resolveExportVar(nodeId: string, exportNames: ReturnType<typeof buildExportNameMap>): string {
+  return exportNames.get(nodeId)?.varName ?? `node_${nodeId}`;
+}
+
+function resolveWorkerVar(
+  workerVar: string,
+  exportNames: ReturnType<typeof buildExportNameMap>,
+): string {
+  if (workerVar.startsWith('node_')) {
+    return resolveExportVar(workerVar.slice(5), exportNames);
+  }
+  return workerVar;
+}
+
 export function compileNodeExportCode(
   node: WorkflowNode,
   workflow: PipelineWorkflow,
+  exportNames?: ReturnType<typeof buildExportNameMap>,
 ): string {
   const def = getNodeDefinition(node.type);
   const paramRecord = paramsToRecord(workflow.params);
-  const inputVars = getInputVars(node.id, workflow.edges, def.inputs);
-  const outputVar = `node_${node.id}`;
-  return def.compile(node.config, inputVars, outputVar, paramRecord, { mode: 'export' });
+  const nameMap = exportNames ?? buildExportNameMap(workflow);
+  const inputVars = getInputVars(node.id, workflow.edges, def.inputs).map((workerVar) =>
+    resolveWorkerVar(workerVar, nameMap),
+  );
+  const outputVar = resolveExportVar(node.id, nameMap);
+  return def.compile(node.config, inputVars, outputVar, paramRecord, {
+    mode: 'export',
+    exportNames: nameMap,
+  });
 }
 
 export function generatePipelineCode(workflow: PipelineWorkflow): string {
   const lines = [...getSetupLines(workflow)];
+  const exportNames = buildExportNameMap(workflow);
 
   for (const node of getSortedPipelineNodes(workflow)) {
     const def = getNodeDefinition(node.type);
-    lines.push(...getNodeCommentLines(node, def));
-    lines.push(compileNodeExportCode(node, workflow));
+    const step = exportNames.get(node.id)?.step;
+    lines.push(...getNodeCommentLines(node, def, step));
+    lines.push(compileNodeExportCode(node, workflow, exportNames));
     lines.push('');
   }
 
@@ -90,6 +124,6 @@ export function generateNodeCode(nodeId: string, workflow: PipelineWorkflow): st
   const node = workflow.nodes.find((n) => n.id === nodeId);
   if (!node) return '';
 
-  return compileNodeExportCode(node, workflow);
+  const exportNames = buildExportNameMap(workflow);
+  return compileNodeExportCode(node, workflow, exportNames);
 }
-

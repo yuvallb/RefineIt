@@ -178,6 +178,16 @@ async function validateExpressionForNode(
   node: WorkflowNode,
   inputVars: string[],
 ): Promise<string | null> {
+  if (node.type === 'custom.python') {
+    const code = typeof node.config.code === 'string' ? node.config.code.trim() : '';
+    if (!code) return 'Python code is required';
+    const result = await kernelClient.validateCustomPython(code);
+    if (!result.valid) {
+      return result.error ?? 'Custom Python failed security validation';
+    }
+    return null;
+  }
+
   if (node.type !== 'filter' && node.type !== 'derive') {
     return null;
   }
@@ -230,6 +240,10 @@ export async function buildPipelineRequest(
     }
 
     if (node.type === 'source.json' && !dataset) {
+      continue;
+    }
+
+    if (node.type === 'source.parquet' && !dataset) {
       continue;
     }
 
@@ -292,6 +306,10 @@ export async function buildPipelineRequest(
 
     if (node.type === 'source.json' && dataset) {
       entry.jsonBytes = dataset.data;
+    }
+
+    if (node.type === 'source.parquet' && dataset) {
+      entry.parquetBytes = dataset.data;
     }
 
     nodes.push(entry);

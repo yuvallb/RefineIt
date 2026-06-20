@@ -13,7 +13,7 @@ import {
 const sampleWorkflow = (): Workflow => ({
   id: 'wf-1',
   name: 'Shared Pipeline',
-  schemaVersion: 1,
+  schemaVersion: 2,
   nodes: [
     {
       id: 'src-1',
