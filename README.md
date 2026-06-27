@@ -79,10 +79,6 @@ Open **Help** in the footer for the full list.
 
 Imported datasets are stored in IndexedDB on your device. Shared URLs and exports contain workflow structure and parameters only — never your data files.
 
-## Architecture
-
-See [`plan/`](./plan/) for full design docs. Execution planning (topo sort, fingerprints, codegen) runs on the main thread; Pyodide in a Web Worker executes Python snippets and holds DataFrames.
-
 ## License
 
 [Apache License 2.0](./LICENSE)
